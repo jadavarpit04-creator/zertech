@@ -127,7 +127,21 @@ const leadRowSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   source: z.string().optional(),
+  notes: z.string().optional(),
 });
+
+// Heuristic: score 1–5 based on intent signals in source + notes.
+function scoreLead(input: { source?: string; notes?: string }): number {
+  const text = `${input.source ?? ""} ${input.notes ?? ""}`.toLowerCase();
+  let score = 3;
+  const strong = ["budget", "timeline", "start date", "urgent", "asap", "sign", "contract", "purchase", "buy now"];
+  const medium = ["quote", "proposal", "pricing", "demo", "call", "meeting", "interested"];
+  const weak = ["newsletter", "general", "info", "curious", "just looking"];
+  if (strong.some((k) => text.includes(k))) score += 2;
+  else if (medium.some((k) => text.includes(k))) score += 1;
+  if (weak.some((k) => text.includes(k))) score -= 1;
+  return Math.max(1, Math.min(5, score));
+}
 
 export const listLeads = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -135,6 +149,7 @@ export const listLeads = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("leads")
       .select("*")
+      .order("score", { ascending: false })
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
@@ -146,7 +161,11 @@ export const importLeads = createServerFn({ method: "POST" })
     z.object({ rows: z.array(leadRowSchema) }).parse(data),
   )
   .handler(async ({ data, context }) => {
-    const rows = data.rows.map((r) => ({ ...r, user_id: context.userId }));
+    const rows = data.rows.map((r) => ({
+      ...r,
+      user_id: context.userId,
+      score: scoreLead(r),
+    }));
     const { data: inserted, error } = await context.supabase
       .from("leads")
       .insert(rows)
@@ -161,12 +180,14 @@ export const importLeads = createServerFn({ method: "POST" })
       .maybeSingle();
     const autoSend = setting?.auto_send ?? false;
 
-    // Draft for each new lead
-    for (const lead of inserted ?? []) {
+    // Draft for each new lead — priority order (high score first)
+    const sorted = [...(inserted ?? [])].sort((a: any, b: any) => (b.score ?? 3) - (a.score ?? 3));
+    for (const lead of sorted) {
+      const anyLead = lead as any;
       const subject = `Thanks for reaching out, ${lead.name.split(" ")[0]}`;
       const body = `Hi ${lead.name},
 
-Thanks for getting in touch${lead.source ? ` via ${lead.source}` : ""}. I'd love to learn more about what you're working on.
+Thanks for getting in touch${lead.source ? ` via ${lead.source}` : ""}. I'd love to learn more about what you're working on${anyLead.notes ? ` — noted: ${anyLead.notes}` : ""}.
 
 Do you have 15 minutes this week to chat? Here are a couple of times that work for me — happy to send a proper calendar link once you pick one.
 
@@ -192,12 +213,13 @@ Talk soon,`;
         action: autoSend ? "draft.auto_sent" : "draft.created",
         entity_type: "lead",
         entity_id: lead.id,
-        meta: { draft_id: draft?.id, subject },
+        meta: { draft_id: draft?.id, subject, score: anyLead.score },
       });
     }
 
     return { count: inserted?.length ?? 0 };
   });
+
 
 // -------------------- Drafts / Approvals --------------------
 export const listPendingDrafts = createServerFn({ method: "GET" })
