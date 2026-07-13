@@ -118,12 +118,22 @@ function Hero() {
 }
 
 function Clients() {
-  const logos = [
-    "NORTHWIND", "ACME/CO", "LUMEN", "AXIOM", "OBSIDIAN",
-    "MERIDIAN", "HELIOS", "VANTAGE", "KAIROS", "PARALLEL",
-    "STRATA", "NOVA·LABS",
+  const token = import.meta.env.VITE_LOVABLE_CONNECTOR_LOGO_DEV_API_KEY;
+  const companies = [
+    { name: "Stripe", domain: "stripe.com" },
+    { name: "Notion", domain: "notion.so" },
+    { name: "Linear", domain: "linear.app" },
+    { name: "Vercel", domain: "vercel.com" },
+    { name: "Figma", domain: "figma.com" },
+    { name: "Slack", domain: "slack.com" },
+    { name: "Shopify", domain: "shopify.com" },
+    { name: "HubSpot", domain: "hubspot.com" },
+    { name: "Intercom", domain: "intercom.com" },
+    { name: "Airtable", domain: "airtable.com" },
+    { name: "Loom", domain: "loom.com" },
+    { name: "Zapier", domain: "zapier.com" },
   ];
-  const row = [...logos, ...logos];
+  const row = [...companies, ...companies];
   return (
     <section className="border-b border-border overflow-hidden">
       <div className="mx-auto max-w-6xl px-6 py-16">
@@ -134,24 +144,30 @@ function Clients() {
           <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-background to-transparent" />
           <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-background to-transparent" />
           <motion.div
-            className="flex gap-14 whitespace-nowrap"
+            className="flex items-center gap-14 whitespace-nowrap"
             animate={{ x: ["0%", "-50%"] }}
             transition={{ duration: 40, ease: "linear", repeat: Infinity }}
           >
-            {row.map((name, i) => (
-              <span
-                key={`${name}-${i}`}
-                className="font-mono text-2xl font-semibold tracking-tight text-muted-foreground/70 transition-colors hover:text-foreground md:text-3xl"
-              >
-                {name}
-              </span>
+            {row.map((c, i) => (
+              <img
+                key={`${c.domain}-${i}`}
+                src={`https://img.logo.dev/${c.domain}?token=${token}&size=120&format=png&greyscale=true`}
+                alt={`${c.name} logo`}
+                loading="lazy"
+                className="h-8 w-auto shrink-0 opacity-60 grayscale transition hover:opacity-100 hover:grayscale-0 md:h-10"
+              />
             ))}
           </motion.div>
         </div>
+        <p className="mt-6 text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">
+          Logos via logo.dev
+        </p>
       </div>
     </section>
   );
 }
+
+
 
 function Problem() {
   return (
