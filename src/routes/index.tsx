@@ -149,14 +149,22 @@ function Clients() {
             transition={{ duration: 40, ease: "linear", repeat: Infinity }}
           >
             {row.map((c, i) => (
-              <img
+              <div
                 key={`${c.domain}-${i}`}
-                src={`https://img.logo.dev/${c.domain}?token=${token}&size=120&format=png&greyscale=true`}
-                alt={`${c.name} logo`}
-                loading="lazy"
-                className="h-8 w-auto shrink-0 opacity-60 grayscale transition hover:opacity-100 hover:grayscale-0 md:h-10"
-              />
+                className="group flex shrink-0 items-center gap-3 opacity-70 transition hover:opacity-100"
+              >
+                <img
+                  src={`https://img.logo.dev/${c.domain}?token=${token}&size=120&format=png&greyscale=true`}
+                  alt={`${c.name} logo`}
+                  loading="lazy"
+                  className="h-8 w-8 rounded-md grayscale transition group-hover:grayscale-0 md:h-10 md:w-10"
+                />
+                <span className="font-mono text-base font-semibold tracking-tight md:text-lg">
+                  {c.name}
+                </span>
+              </div>
             ))}
+
           </motion.div>
         </div>
         <p className="mt-6 text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">
