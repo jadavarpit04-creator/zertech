@@ -11,7 +11,9 @@ function Landing() {
     <div className="min-h-screen bg-background text-foreground">
       <Nav />
       <Hero />
+      <Clients />
       <Problem />
+
       <Workflows />
       <HowItWorks />
       <Pricing />
@@ -115,8 +117,45 @@ function Hero() {
   );
 }
 
+function Clients() {
+  const logos = [
+    "NORTHWIND", "ACME/CO", "LUMEN", "AXIOM", "OBSIDIAN",
+    "MERIDIAN", "HELIOS", "VANTAGE", "KAIROS", "PARALLEL",
+    "STRATA", "NOVA·LABS",
+  ];
+  const row = [...logos, ...logos];
+  return (
+    <section className="border-b border-border overflow-hidden">
+      <div className="mx-auto max-w-6xl px-6 py-16">
+        <div className="mono-caps text-center text-muted-foreground">
+          Companies we collaborate with
+        </div>
+        <div className="relative mt-10">
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-background to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-background to-transparent" />
+          <motion.div
+            className="flex gap-14 whitespace-nowrap"
+            animate={{ x: ["0%", "-50%"] }}
+            transition={{ duration: 40, ease: "linear", repeat: Infinity }}
+          >
+            {row.map((name, i) => (
+              <span
+                key={`${name}-${i}`}
+                className="font-mono text-2xl font-semibold tracking-tight text-muted-foreground/70 transition-colors hover:text-foreground md:text-3xl"
+              >
+                {name}
+              </span>
+            ))}
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Problem() {
   return (
+
     <section className="border-b border-border">
       <div className="mx-auto max-w-6xl px-6 py-24">
         <div className="grid gap-12 md:grid-cols-2">
