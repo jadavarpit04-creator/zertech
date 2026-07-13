@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ArrowRight, Check, Mail, Users, ClipboardList } from "lucide-react";
+import { ArrowRight, Check, Mail, Users, ClipboardList, Zap, Shield, LineChart, Clock, Quote, Minus, Plus } from "lucide-react";
+import { useState } from "react";
 
 export const Route = createFileRoute("/")({
   component: Landing,
@@ -13,14 +14,19 @@ function Landing() {
       <Hero />
       <Clients />
       <Problem />
-
+      <Metrics />
       <Workflows />
+      <Features />
       <HowItWorks />
+      <Testimonials />
       <Pricing />
+      <FAQ />
+      <FinalCTA />
       <Footer />
     </div>
   );
 }
+
 
 function Nav() {
   return (
