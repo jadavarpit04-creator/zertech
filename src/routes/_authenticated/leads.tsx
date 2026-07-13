@@ -52,18 +52,22 @@ function LeadsPage() {
             <table className="w-full text-sm">
               <thead className="border-b border-border">
                 <tr className="text-left">
+                  <th className="mono-caps px-4 py-3 text-muted-foreground">Score</th>
                   <th className="mono-caps px-4 py-3 text-muted-foreground">Name</th>
                   <th className="mono-caps px-4 py-3 text-muted-foreground">Email</th>
                   <th className="mono-caps px-4 py-3 text-muted-foreground">Source</th>
+                  <th className="mono-caps px-4 py-3 text-muted-foreground">Notes</th>
                   <th className="mono-caps px-4 py-3 text-muted-foreground">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {data.map((l) => (
+                {data.map((l: any) => (
                   <tr key={l.id}>
+                    <td className="px-4 py-3"><ScoreBadge score={l.score ?? 3} /></td>
                     <td className="px-4 py-3">{l.name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{l.email}</td>
                     <td className="px-4 py-3 text-muted-foreground">{l.source ?? "—"}</td>
+                    <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{l.notes ?? "—"}</td>
                     <td className="px-4 py-3">
                       <span className="mono-caps rounded-sm bg-muted px-2 py-1 text-muted-foreground">
                         {l.status}
@@ -74,6 +78,7 @@ function LeadsPage() {
               </tbody>
             </table>
           </div>
+
         )}
       </div>
       {open && <ImportModal onClose={() => setOpen(false)} />}
