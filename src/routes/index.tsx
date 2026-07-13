@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ArrowRight, Check, Mail, Users, ClipboardList } from "lucide-react";
+import { ArrowRight, Check, Mail, Users, ClipboardList, Zap, Shield, LineChart, Clock, Quote, Minus, Plus } from "lucide-react";
+import { useState } from "react";
 
 export const Route = createFileRoute("/")({
   component: Landing,
@@ -13,14 +14,19 @@ function Landing() {
       <Hero />
       <Clients />
       <Problem />
-
+      <Metrics />
       <Workflows />
+      <Features />
       <HowItWorks />
+      <Testimonials />
       <Pricing />
+      <FAQ />
+      <FinalCTA />
       <Footer />
     </div>
   );
 }
+
 
 function Nav() {
   return (
@@ -324,6 +330,243 @@ function Pricing() {
     </section>
   );
 }
+
+function Metrics() {
+  const stats = [
+    { k: "47 hrs", v: "industry avg lead response time" },
+    { k: "5 mins", v: "response = 21× more qualified leads" },
+    { k: "15–25%", v: "revenue lost to late invoices" },
+    { k: "8–12 hrs", v: "weekly manual follow-up work" },
+  ];
+  return (
+    <section className="border-b border-border">
+      <div className="mx-auto max-w-6xl px-6 py-24">
+        <div className="mono-caps text-muted-foreground">By the numbers</div>
+        <h2 className="mt-4 max-w-2xl font-mono text-3xl font-bold md:text-4xl">
+          The cost of doing follow-ups by hand.
+        </h2>
+        <div className="mt-12 grid gap-px overflow-hidden rounded-sm border border-border bg-border md:grid-cols-4">
+          {stats.map((s, i) => (
+            <motion.div
+              key={s.v}
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.05 }}
+              className="bg-card p-6"
+            >
+              <div className="font-mono text-3xl font-bold md:text-4xl">{s.k}</div>
+              <div className="mono-caps mt-2 text-muted-foreground">{s.v}</div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Features() {
+  const items = [
+    {
+      icon: Zap,
+      title: "AI-drafted, human-approved",
+      desc: "Every reminder and reply is generated with context — you approve, edit, or discard in one click.",
+    },
+    {
+      icon: LineChart,
+      title: "Lead scoring 1–5",
+      desc: "Intent signals (budget, timeline, urgency) auto-rank leads so the hot ones surface at the top.",
+    },
+    {
+      icon: Clock,
+      title: "Escalation sequence",
+      desc: "Overdue invoice at 7, 14, 30 days — friendly → professional → firm. No awkwardness required.",
+    },
+    {
+      icon: Shield,
+      title: "Approval-first by default",
+      desc: "Nothing sends without you. Toggle auto-send per workflow when you're ready to trust it.",
+    },
+    {
+      icon: Mail,
+      title: "Gmail + Outlook",
+      desc: "Connect your existing inbox. We send from your address, threads land where they belong.",
+    },
+    {
+      icon: ClipboardList,
+      title: "Sheets sync",
+      desc: "Every action written to Google Sheets in real time — audit-ready without lifting a finger.",
+    },
+  ];
+  return (
+    <section className="border-b border-border">
+      <div className="mx-auto max-w-6xl px-6 py-24">
+        <div className="mono-caps text-muted-foreground">Features</div>
+        <h2 className="mt-4 font-mono text-3xl font-bold md:text-4xl">
+          Built for agencies that can't afford to drop follow-ups.
+        </h2>
+        <div className="mt-12 grid gap-px overflow-hidden rounded-sm border border-border bg-border md:grid-cols-3">
+          {items.map((it, i) => (
+            <motion.div
+              key={it.title}
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.05 }}
+              className="bg-card p-8"
+            >
+              <it.icon className="h-5 w-5" />
+              <h3 className="mt-6 font-mono text-lg font-semibold">{it.title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{it.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Testimonials() {
+  const quotes = [
+    {
+      q: "We recovered ₹4.2L of overdue invoices in the first month. The drafts sound like me, and I still get to approve every send.",
+      n: "Raj M.",
+      r: "Founder, digital marketing agency",
+    },
+    {
+      q: "Lead response went from a day to under 10 minutes. Close rate on inbound went up almost 2×.",
+      n: "Priya S.",
+      r: "Ops Manager, SaaS dev shop",
+    },
+    {
+      q: "I stopped dreading Monday. All my follow-ups are queued and ready before I open Gmail.",
+      n: "Arjun K.",
+      r: "Freelance designer",
+    },
+  ];
+  return (
+    <section className="border-b border-border">
+      <div className="mx-auto max-w-6xl px-6 py-24">
+        <div className="mono-caps text-muted-foreground">Voices</div>
+        <h2 className="mt-4 font-mono text-3xl font-bold md:text-4xl">
+          Agencies that stopped chasing.
+        </h2>
+        <div className="mt-12 grid gap-px overflow-hidden rounded-sm border border-border bg-border md:grid-cols-3">
+          {quotes.map((t, i) => (
+            <motion.div
+              key={t.n}
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.05 }}
+              className="flex flex-col justify-between bg-card p-8"
+            >
+              <Quote className="h-6 w-6 text-muted-foreground" />
+              <p className="mt-6 text-sm leading-relaxed">"{t.q}"</p>
+              <div className="mt-8">
+                <div className="font-mono text-sm font-semibold">{t.n}</div>
+                <div className="mono-caps mt-1 text-muted-foreground">{t.r}</div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FAQ() {
+  const items = [
+    {
+      q: "Will messages send automatically without me?",
+      a: "No — approval is on by default. Every draft waits for you to click send. You can flip on auto-send per workflow once you trust it.",
+    },
+    {
+      q: "Do you support Outlook or only Gmail?",
+      a: "Gmail first, Outlook next. Both use official APIs so deliverability stays yours, not ours.",
+    },
+    {
+      q: "Where does the data live?",
+      a: "Your data sits in your workspace, encrypted at rest, scoped to your account only. 30-day retention by default.",
+    },
+    {
+      q: "How is lead scoring calculated?",
+      a: "Intent signals in the source and notes — budget, timeline, urgency keywords lift the score, generic inquiries lower it. Range 1–5, high-priority sorts first.",
+    },
+    {
+      q: "Can I edit templates?",
+      a: "Yes. Every draft is editable inline before you send. Pro plan unlocks custom template libraries per workflow.",
+    },
+    {
+      q: "What if I cancel?",
+      a: "Cancel any time. Your data stays exportable for 30 days, then it's deleted for good.",
+    },
+  ];
+  const [open, setOpen] = useState<number | null>(0);
+  return (
+    <section className="border-b border-border">
+      <div className="mx-auto max-w-3xl px-6 py-24">
+        <div className="mono-caps text-muted-foreground">FAQ</div>
+        <h2 className="mt-4 font-mono text-3xl font-bold md:text-4xl">Answers.</h2>
+        <div className="mt-10 divide-y divide-border rounded-sm border border-border bg-card">
+          {items.map((it, i) => {
+            const isOpen = open === i;
+            return (
+              <button
+                key={it.q}
+                onClick={() => setOpen(isOpen ? null : i)}
+                className="w-full px-6 py-5 text-left"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <span className="font-mono text-sm font-semibold">{it.q}</span>
+                  {isOpen ? <Minus className="h-4 w-4 shrink-0" /> : <Plus className="h-4 w-4 shrink-0" />}
+                </div>
+                {isOpen && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-3 text-sm text-muted-foreground"
+                  >
+                    {it.a}
+                  </motion.p>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FinalCTA() {
+  return (
+    <section className="border-b border-border bg-foreground text-background">
+      <div className="mx-auto max-w-4xl px-6 py-24 text-center">
+        <div className="mono-caps text-background/60">Start today</div>
+        <h2 className="mt-4 font-mono text-4xl font-bold md:text-5xl">
+          Stop chasing. Start collecting.
+        </h2>
+        <p className="mx-auto mt-6 max-w-xl text-background/70">
+          14-day free trial. No credit card. Set up your first workflow in under 5 minutes.
+        </p>
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            to="/auth"
+            className="inline-flex items-center gap-2 rounded-sm bg-background px-6 py-3 text-sm font-medium text-foreground"
+          >
+            Start free trial
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+          <a href="#pricing" className="rounded-sm border border-background/30 px-6 py-3 text-sm">
+            See pricing
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 
 function Footer() {
   return (
