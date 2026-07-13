@@ -152,6 +152,8 @@ export type Database = {
           email: string
           id: string
           name: string
+          notes: string | null
+          score: number
           source: string | null
           status: string
           user_id: string
@@ -161,6 +163,8 @@ export type Database = {
           email: string
           id?: string
           name: string
+          notes?: string | null
+          score?: number
           source?: string | null
           status?: string
           user_id: string
@@ -170,6 +174,8 @@ export type Database = {
           email?: string
           id?: string
           name?: string
+          notes?: string | null
+          score?: number
           source?: string | null
           status?: string
           user_id?: string
