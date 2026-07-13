@@ -14,7 +14,216 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activity_log: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          meta: Json
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          meta?: Json
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          meta?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
+      drafts: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          kind: string
+          recipient_email: string
+          recipient_name: string
+          sent_at: string | null
+          source_id: string | null
+          status: string
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          kind: string
+          recipient_email: string
+          recipient_name: string
+          sent_at?: string | null
+          source_id?: string | null
+          status?: string
+          subject: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          recipient_email?: string
+          recipient_name?: string
+          sent_at?: string | null
+          source_id?: string | null
+          status?: string
+          subject?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      integrations: {
+        Row: {
+          connected: boolean
+          created_at: string
+          id: string
+          meta: Json
+          provider: string
+          user_id: string
+        }
+        Insert: {
+          connected?: boolean
+          created_at?: string
+          id?: string
+          meta?: Json
+          provider: string
+          user_id: string
+        }
+        Update: {
+          connected?: boolean
+          created_at?: string
+          id?: string
+          meta?: Json
+          provider?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          amount: number
+          client_email: string
+          client_name: string
+          created_at: string
+          due_date: string
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          client_email: string
+          client_name: string
+          created_at?: string
+          due_date: string
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          client_email?: string
+          client_name?: string
+          created_at?: string
+          due_date?: string
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      leads: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          source: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          source?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          source?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          company: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      workflow_settings: {
+        Row: {
+          approval_required: boolean
+          auto_send: boolean
+          created_at: string
+          id: string
+          user_id: string
+          workflow: string
+        }
+        Insert: {
+          approval_required?: boolean
+          auto_send?: boolean
+          created_at?: string
+          id?: string
+          user_id: string
+          workflow: string
+        }
+        Update: {
+          approval_required?: boolean
+          auto_send?: boolean
+          created_at?: string
+          id?: string
+          user_id?: string
+          workflow?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
