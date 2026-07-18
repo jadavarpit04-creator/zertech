@@ -30,3 +30,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Next.js
+.next/
+
+# Environment
+.env
+.env.local
+.env.production
+.env.development
+
+# Build artifacts
+*.tsbuildinfo

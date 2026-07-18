@@ -1,6 +1,4 @@
 import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "@better-auth/drizzle-adapter";
-import { getDb } from "@/lib/db";
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:8080",
@@ -15,9 +13,4 @@ export const auth = betterAuth({
     window: 60,
     max: 10,
   },
-  database: getDb()
-    ? drizzleAdapter(getDb()!, {
-        provider: "pg",
-      })
-    : undefined,
 });

@@ -3,6 +3,58 @@
 -- Paste this ENTIRE file into Supabase SQL Editor and click Run.
 -- ============================================================
 
+-- better-auth user table
+CREATE TABLE IF NOT EXISTS public."user" (
+  id TEXT NOT NULL PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  email_verified BOOLEAN NOT NULL DEFAULT false,
+  image TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- better-auth session table
+CREATE TABLE IF NOT EXISTS public."session" (
+  id TEXT NOT NULL PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES public."user"(id) ON DELETE CASCADE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  token TEXT NOT NULL UNIQUE,
+  ip_address TEXT,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- better-auth account table
+CREATE TABLE IF NOT EXISTS public."account" (
+  id TEXT NOT NULL PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES public."user"(id) ON DELETE CASCADE,
+  provider_id TEXT NOT NULL,
+  account_id TEXT NOT NULL,
+  password TEXT,
+  access_token TEXT,
+  refresh_token TEXT,
+  id_token TEXT,
+  access_token_expires_at TIMESTAMPTZ,
+  refresh_token_expires_at TIMESTAMPTZ,
+  scope TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- better-auth verification table
+CREATE TABLE IF NOT EXISTS public."verification" (
+  id TEXT NOT NULL PRIMARY KEY,
+  value TEXT NOT NULL,
+  identifier TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+GRANT ALL ON public."user", public."session", public."account", public."verification" TO service_role;
+
 -- profiles
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID NOT NULL PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
