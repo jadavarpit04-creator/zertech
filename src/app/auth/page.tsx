@@ -71,8 +71,8 @@ export default function AuthPage() {
           },
         });
         if (error) throw error;
-        toast.success("Account created. Redirecting…");
-        router.push("/onboarding");
+        toast.success("Account created! Check your email to verify.");
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
