@@ -1,8 +1,8 @@
 import { betterAuth } from "better-auth";
-import { memoryAdapter } from "@better-auth/memory-adapter";
 
 export const auth = betterAuth({
-  database: memoryAdapter({}),
+  baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:8080",
+  secret: process.env.BETTER_AUTH_SECRET ?? "zertech-dev-secret-change-in-prod-32chars!",
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,
