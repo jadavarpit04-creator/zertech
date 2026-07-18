@@ -143,7 +143,7 @@ CREATE TABLE IF NOT EXISTS public.emails (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   gmail_id TEXT NOT NULL,
-  from TEXT NOT NULL DEFAULT '',
+  sender TEXT NOT NULL DEFAULT '',
   subject TEXT NOT NULL DEFAULT '',
   body_snippet TEXT NOT NULL DEFAULT '',
   has_attachments BOOLEAN NOT NULL DEFAULT false,
