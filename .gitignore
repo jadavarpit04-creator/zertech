@@ -43,3 +43,4 @@ dist-ssr
 # Build artifacts
 *.tsbuildinfo
 .vercel
+.vercel-env.sh
