@@ -38,11 +38,6 @@ export default function InvoicesPage() {
       )));
     return matchesSearch && matchesUrgency;
   });
-    if (tab === "pending") return i.status === "pending" || i.status === "overdue";
-    if (tab === "sent") return i.status === "sent";
-    if (tab === "paid") return i.status === "paid";
-    return true;
-  });
 
   return (
     <>
@@ -93,7 +88,7 @@ export default function InvoicesPage() {
             {(["all", "urgent"]).map((u) => (
               <button
                 key={u}
-                onClick={() => setUrgency(u)}
+                onClick={() => setUrgency(u as "all" | "urgent")}
                 className={"rounded-sm px-3 py-1.5 text-xs capitalize " + (urgency === u ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground")}
               >
                 {u === "all" ? "All" : "Urgent (7d+ overdue)"}
@@ -290,3 +285,7 @@ function ImportModal({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
+
+
+
+

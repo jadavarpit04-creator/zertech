@@ -93,10 +93,10 @@ export function listSettings() {
 export function updateWorkflow(data: { workflow: "invoice" | "lead"; auto_send: boolean }) {
   return call<{ ok: boolean }>("updateWorkflow", data);
 }
-export function toggleIntegration(data: { provider: "gmail" | "sheets" | "outlook" | "slack"; connected: boolean }) {
+export function toggleIntegration(data: { provider: "gmail" | "sheets" | "outlook" | "slack" | "make"; connected: boolean }) {
   return call<{ ok: boolean }>("toggleIntegration", data);
 }
-export function saveIntegrationMeta(data: { provider: "gmail" | "sheets" | "outlook" | "slack"; meta: Record<string, any> }) {
+export function saveIntegrationMeta(data: { provider: "gmail" | "sheets" | "outlook" | "slack" | "make"; meta: Record<string, any> }) {
   return call<{ ok: boolean }>("saveIntegrationMeta", data);
 }
 export function reportsSummary(period: "30d" | "90d" | "year" = "30d") {

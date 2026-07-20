@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -24,7 +24,7 @@ export default function SettingsPage() {
     onError: (e) => toast.error(e.message),
   });
 
-  if (isLoading) return <div className="p-8 text-sm text-muted-foreground">Loading settings…</div>;
+  if (isLoading) return <div className="p-8 text-sm text-muted-foreground">Loading settingsâ€¦</div>;
 
   const wfMap = Object.fromEntries((data?.workflows ?? []).map((w: any) => [w.workflow, w]));
   const intMap = Object.fromEntries((data?.integrations ?? []).map((i: any) => [i.provider, i]));
@@ -40,7 +40,7 @@ export default function SettingsPage() {
       <PageHeader eyebrow="Config" title="Settings" />
       <div className="space-y-10 p-6 md:p-10">
         <section>
-          <h2 className="mono-caps text-muted-foreground">Workflow — approval mode</h2>
+          <h2 className="mono-caps text-muted-foreground">Workflow â€” approval mode</h2>
           <div className="mt-4 divide-y divide-border overflow-hidden rounded-sm border border-border bg-card">
             {(["invoice", "lead"] as const).map((w) => {
               const s = wfMap[w];
@@ -112,7 +112,7 @@ export default function SettingsPage() {
             })}
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            Gmail and Google Sheets use OAuth — connect once and drafts send/sync automatically.
+            Gmail and Google Sheets use OAuth â€” connect once and drafts send/sync automatically.
           </p>
         </section>
 
@@ -166,7 +166,7 @@ function SlackTelegramForm({
     <div className="grid gap-6 md:grid-cols-2">
       <div className="space-y-3">
         <div className="font-mono text-sm font-semibold">
-          Slack {slackConnected && <span className="text-green-500">• connected</span>}
+          Slack {slackConnected && <span className="text-green-500">â€¢ connected</span>}
         </div>
         <input
           placeholder="https://hooks.slack.com/services/..."
@@ -177,7 +177,7 @@ function SlackTelegramForm({
       </div>
       <div className="space-y-3">
         <div className="font-mono text-sm font-semibold">
-          Telegram {telegramConnected && <span className="text-green-500">• connected</span>}
+          Telegram {telegramConnected && <span className="text-green-500">â€¢ connected</span>}
         </div>
         <input
           placeholder="Bot token (123:ABC...)"
@@ -203,7 +203,7 @@ function SlackTelegramForm({
           }
           className="rounded-sm bg-foreground px-4 py-1.5 text-sm font-medium text-background transition hover:opacity-90"
         >
-          {saveMut.isPending ? "Saving…" : "Save notifications"}
+          {saveMut.isPending ? "Savingâ€¦" : "Save notifications"}
         </button>
       </div>
     </div>
@@ -221,7 +221,7 @@ function TemplatesPanel() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  if (isLoading) return <div className="mt-4 text-sm text-muted-foreground">Loading templates…</div>;
+  if (isLoading) return <div className="mt-4 text-sm text-muted-foreground">Loading templatesâ€¦</div>;
 
   return (
     <div className="mt-4 space-y-4 rounded-sm border border-border bg-card p-6">
@@ -289,7 +289,7 @@ function TemplatesPanel() {
               disabled={saveMut.isPending || !editing.name || !editing.subject}
               className="rounded-sm bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
             >
-              {saveMut.isPending ? "Saving…" : "Save template"}
+              {saveMut.isPending ? "Savingâ€¦" : "Save template"}
             </button>
           </div>
         </div>
@@ -304,9 +304,9 @@ function TemplatesPanel() {
 }
 
 const PLANS = [
-  { id: "starter", name: "Starter", price: "₹2,499 / $49", sub: "Perfect for freelancers" },
-  { id: "growth", name: "Growth", price: "₹7,499 / $149", sub: "For growing agencies" },
-  { id: "pro", name: "Pro", price: "₹14,999 / $299", sub: "Unlimited scale + team" },
+  { id: "starter", name: "Starter", price: "â‚¹2,499 / $49", sub: "Perfect for freelancers" },
+  { id: "growth", name: "Growth", price: "â‚¹7,499 / $149", sub: "For growing agencies" },
+  { id: "pro", name: "Pro", price: "â‚¹14,999 / $299", sub: "Unlimited scale + team" },
 ] as const;
 
 function BillingPanel() {
@@ -347,7 +347,7 @@ function BillingPanel() {
                   : "bg-foreground text-background hover:opacity-90"
               } disabled:opacity-50`}
             >
-              {active ? "Active" : planMut.isPending ? "…" : "Switch plan"}
+              {active ? "Active" : planMut.isPending ? "â€¦" : "Switch plan"}
             </button>
           </div>
         );
@@ -380,3 +380,4 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
     </button>
   );
 }
+

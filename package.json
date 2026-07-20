@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@better-auth/core": "^1.6.23",
     "@better-auth/drizzle-adapter": "^1.6.23",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -41,6 +42,7 @@
     "@supabase/supabase-js": "^2.110.2",
     "@tanstack/react-query": "^5.101.1",
     "better-auth": "^1.6.23",
+    "better-call": "^2.0.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -49,6 +51,7 @@
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.42.2",
     "input-otp": "^1.4.2",
+    "jose": "^6.2.3",
     "lucide-react": "^1.24.0",
     "next": "^14.2.35",
     "openai": "^6.46.0",

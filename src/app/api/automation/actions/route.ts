@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 
 /**
  * POST /api/automation/actions
  *
- * Actions that ActivePieces can call to interact with Zertech.
- * Each action requires an API key if ACTIVE_PIECES_API_KEY is set.
+ * Actions that external automation platforms can call to interact with Zertech.
+ * Each action requires an API key if WEBHOOK_API_KEY is set.
  *
  * Body: { action: string, params: object, api_key?: string }
  *
@@ -29,22 +29,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing action field" }, { status: 400 });
     }
 
-    // API key validation is optional (ActivePieces free tier doesn't need it)
-    const activePiecesKey = process.env.ACTIVE_PIECES_API_KEY;
-    if (activePiecesKey && api_key !== activePiecesKey) {
-      return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
-    }
+    // API key check is optional (skip if not configured)
+    const webhookApiKey = process.env.WEBHOOK_API_KEY?.trim() || "";
 
-    // Authenticate via session
+    // Authenticate via session or API key
+    let userId = "";
     const { auth } = await import("@/lib/auth");
     const session = await auth.api.getSession({ headers: req.headers });
-
-    if (!session?.user) {
+    if (session?.user) {
+      userId = session.user.id;
+    } else if (webhookApiKey && api_key?.trim() === webhookApiKey) {
+      // API key auth fallback for automation platforms like Make.com
+      userId = "system";
+    } else {
       return NextResponse.json({ error: "Unauthorized - session required" }, { status: 401 });
     }
 
     const supabase = supabaseAdmin;
-    const userId = session.user.id;
+    
 
     switch (action) {
       case "create_draft": {
@@ -81,10 +83,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Unknown action: " + action }, { status: 400 });
     }
   } catch (err: any) {
-    console.error("[ActivePieces actions]", err);
+    console.error("[Actions]", err);
     return NextResponse.json(
       { error: err.message ?? "Internal error" },
       { status: 500 }
     );
   }
 }
+
+
+
+

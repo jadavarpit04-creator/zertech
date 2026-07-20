@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 /**
  * GET /api/automation/triggers
  *
- * Returns available triggers for ActivePieces integration.
- * ActivePieces polls this to discover available triggers.
+ * Returns available triggers for external automation integration.
+ * External automation platforms poll this to discover available triggers.
  */
 export async function GET() {
   return NextResponse.json({

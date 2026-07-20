@@ -80,3 +80,18 @@ export async function getTelegramConfig(
   if (!meta?.telegram_bot_token || !meta?.telegram_chat_id) return null;
   return { botToken: meta.telegram_bot_token, chatId: meta.telegram_chat_id };
 }
+
+/** Read the user configured Make.com webhook URL from settings meta. */
+export async function getMakeWebhook(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("integrations")
+    .select("meta")
+    .eq("user_id", userId)
+    .eq("provider", "make")
+    .eq("connected", true)
+    .single();
+  return ((data?.meta as any)?.webhook_url as string) ?? null;
+}

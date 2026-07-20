@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 /**
  * POST /api/automation/webhook
  *
- * Receives webhooks from ActivePieces automation platform.
+ * Receives webhooks from external automation platforms.
  * Supports multiple trigger types:
  *   - draft.created: When a new draft is created
  *   - invoice.overdue: When an invoice becomes overdue
@@ -12,11 +12,7 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
  *   - lead.new: When a new lead is detected
  *   - custom: Custom webhook payload
  *
- * ActivePieces should POST JSON with:
- *   { trigger: string, payload: object, api_key?: string }
- *
- * If ACTIVE_PIECES_API_KEY is set in env, webhooks without
- * a matching key are rejected.
+ * Expects JSON body: { trigger: string, payload: object, api_key?: string }
  */
 export async function POST(req: NextRequest) {
   try {
@@ -27,10 +23,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing trigger field" }, { status: 400 });
     }
 
-    // API key validation is optional (ActivePieces free tier doesn't need it)
-    // Set ACTIVE_PIECES_API_KEY in .env to enable auth
-    const activePiecesKey = process.env.ACTIVE_PIECES_API_KEY;
-    if (activePiecesKey && api_key !== activePiecesKey) {
+    const webhookApiKey = process.env.WEBHOOK_API_KEY;
+    if (webhookApiKey && api_key !== webhookApiKey) {
       return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
     }
 
@@ -46,8 +40,8 @@ export async function POST(req: NextRequest) {
         user_id: payload.user_id,
         action: "automation.webhook_received",
         entity_type: "automation",
-        meta: { trigger, provider: "activepieces", payload },
-      }).catch(() => {});
+        meta: { trigger, payload },
+      });
     }
 
     return NextResponse.json({
@@ -57,7 +51,7 @@ export async function POST(req: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (err: any) {
-    console.error("[ActivePieces webhook]", err);
+    console.error("[Webhook]", err);
     return NextResponse.json(
       { error: err.message ?? "Internal error" },
       { status: 500 }
@@ -67,7 +61,7 @@ export async function POST(req: NextRequest) {
 
 /**
  * GET /api/automation/webhook
- * Health check endpoint for ActivePieces to verify connectivity.
+ * Health check endpoint for webhook connectivity.
  */
 export async function GET() {
   return NextResponse.json({
@@ -81,3 +75,4 @@ export async function GET() {
     },
   });
 }
+

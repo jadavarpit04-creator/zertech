@@ -1,0 +1,71 @@
+﻿  ▲ Next.js 14.2.35
+  - Environments: .env
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+
+./src/app/auth/page.tsx
+102:11  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/app/layout.tsx
+36:9  Warning: Custom fonts not added in `pages/_document.js` will only load for a single page. This is discouraged. See: https://nextjs.org/docs/messages/no-page-custom-font  @next/next/no-page-custom-font
+
+./src/app/page.tsx
+34:11  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+152:17  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+562:11  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/ai-chat-widget.tsx
+42:6  Warning: React Hook useEffect has a missing dependency: 'messages.length'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+110:15  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/app-shell.tsx
+47:11  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+80:11  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/22) ...
+   Generating static pages (5/22) 
+   Generating static pages (10/22) 
+   Generating static pages (16/22) 
+ ✓ Generating static pages (22/22)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    6.53 kB         143 kB
+├ ○ /_not-found                          873 B          88.2 kB
+├ ƒ /api/ai/draft                        0 B                0 B
+├ ƒ /api/auth/[...all]                   0 B                0 B
+├ ƒ /api/automation/actions              0 B                0 B
+├ ○ /api/automation/triggers             0 B                0 B
+├ ƒ /api/automation/webhook              0 B                0 B
+├ ƒ /api/chat                            0 B                0 B
+├ ƒ /api/fn                              0 B                0 B
+├ ƒ /api/gmail                           0 B                0 B
+├ ƒ /api/gmail/callback                  0 B                0 B
+├ ƒ /api/scheduled/process               0 B                0 B
+├ ƒ /api/sheets                          0 B                0 B
+├ ○ /approvals                           7.81 kB         175 kB
+├ ○ /auth                                1.97 kB         158 kB
+├ ○ /dashboard                           5.08 kB         172 kB
+├ ○ /history                             3.03 kB         130 kB
+├ ○ /invoices                            6.46 kB         134 kB
+├ ○ /leads                               5.59 kB         133 kB
+├ ○ /onboarding                          6.8 kB          163 kB
+├ ○ /profile                             4.78 kB         132 kB
+├ ○ /reports                             3.68 kB         161 kB
+└ ○ /settings                            6.67 kB         134 kB
++ First Load JS shared by all            87.3 kB
+  ├ chunks/117-8101c2d55d9a82f1.js       31.7 kB
+  ├ chunks/fd9d1056-642b866fb2fe8066.js  53.6 kB
+  └ other shared chunks (total)          1.95 kB
+
+
+ƒ Middleware                             25.1 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
