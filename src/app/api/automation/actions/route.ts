@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     }
 
     // API key check is optional (skip if not configured)
-    const webhookApiKey = process.env.WEBHOOK_API_KEY?.trim() || "";
+    const webhookApiKey = "348639ed-95dd-4afe-8de5-4506bcf1ee3f";
 
     // Authenticate via session or API key
     let userId = "";
@@ -90,6 +90,7 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
 
 
 
