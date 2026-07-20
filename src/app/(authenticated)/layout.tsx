@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/lib/auth-client";
 import { AppShell } from "@/components/app-shell";
 
 export default function AuthenticatedLayout({
@@ -11,21 +11,18 @@ export default function AuthenticatedLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const { data: session, isPending } = useSession();
+  const [initialCheck, setInitialCheck] = useState(false);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (error || !data.user) {
-        router.replace("/auth");
-      } else {
-        setIsAuthenticated(true);
-      }
-    };
-    checkAuth();
-  }, [router]);
+    if (!isPending && !session) {
+      router.replace("/auth");
+    } else if (!isPending && session) {
+      setInitialCheck(true);
+    }
+  }, [session, isPending, router]);
 
-  if (isAuthenticated === null) {
+  if (!initialCheck) {
     return null;
   }
 

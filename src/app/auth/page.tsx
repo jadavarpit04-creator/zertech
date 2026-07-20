@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { signIn, signUp, useSession } from "@/lib/auth-client";
 
 const TEAM_SIZES: Array<{ value: string; label: string; sub: string }> = [
   { value: "1 (Solo)", label: "1", sub: "Solo" },
@@ -18,6 +18,7 @@ const TEAM_SIZES: Array<{ value: string; label: string; sub: string }> = [
 
 export default function AuthPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,26 +32,12 @@ export default function AuthPage() {
     if (m === "signup") setMode("signup");
   }, []);
 
+  // If already logged in, redirect to dashboard
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        handlePostAuthRedirect(data.session.user);
-      }
-    });
-  }, [router]);
-
-  const handlePostAuthRedirect = async (user: any) => {
-    // New users (created in the last 2 min) go to onboarding; everyone else to dashboard.
-    const isNewUser =
-      user.created_at &&
-      Date.now() - new Date(user.created_at).getTime() < 120000;
-
-    if (isNewUser) {
-      router.push("/onboarding");
-    } else {
+    if (session) {
       router.push("/dashboard");
     }
-  };
+  }, [session, router]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,21 +49,30 @@ export default function AuthPage() {
           setBusy(false);
           return;
         }
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: window.location.origin,
-            data: { full_name: fullName, company, team_size: teamSize },
-          },
-        });
-        if (error) throw error;
-        toast.success("Account created! Check your email to verify.");
-        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        await signUp.email(
+          { email, password, name: fullName },
+          {
+            onSuccess: () => {
+              toast.success("Account created! Welcome to Zertech.");
+              router.push("/onboarding");
+            },
+            onError: (ctx) => {
+              toast.error(ctx.error.message ?? "Something went wrong");
+            },
+          }
+        );
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        router.push("/dashboard");
+        await signIn.email(
+          { email, password },
+          {
+            onSuccess: () => {
+              router.push("/dashboard");
+            },
+            onError: (ctx) => {
+              toast.error(ctx.error.message ?? "Invalid credentials");
+            },
+          }
+        );
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
@@ -87,17 +83,11 @@ export default function AuthPage() {
 
   const google = async () => {
     setBusy(true);
-    const { error } = await supabase.auth.signInWithOAuth({
+    await signIn.social({
       provider: "google",
-      options: {
-        redirectTo: window.location.origin + "/auth",
-      },
+      callbackURL: "/dashboard",
     });
-    if (error) {
-      toast.error(error.message ?? "Google sign-in failed");
-      setBusy(false);
-      return;
-    }
+    setBusy(false);
   };
 
   return (

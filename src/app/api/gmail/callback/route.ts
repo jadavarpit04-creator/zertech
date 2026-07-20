@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { handleGmailCallback } from "@/lib/gmail-service";
 
 /**
@@ -9,6 +8,9 @@ import { handleGmailCallback } from "@/lib/gmail-service";
  * Google OAuth redirects here with ?code= after user consents.
  * Exchanges the code for tokens, stores them in the integrations table,
  * then redirects the user to /settings?gmail=connected.
+ *
+ * The user's Better-Auth session cookie is forwarded with the redirect,
+ * so we can identify them via the session.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -24,21 +26,20 @@ export async function GET(req: NextRequest) {
     // Exchange the auth code for tokens
     const tokens = await handleGmailCallback(code);
 
-    // Store tokens in the integrations table
-    const supabase = createRouteHandlerClient({ cookies });
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+    // Identify user from Better-Auth session cookie (forwarded with OAuth redirect)
+    const { auth } = await import("@/lib/auth");
+    const session = await auth.api.getSession({
+      headers: req.headers,
+    });
 
-    if (sessionError || !session?.user) {
-      // No session — redirect to auth with an error
+    if (!session?.user) {
       return NextResponse.redirect(
         new URL("/auth?error=session_required", req.url)
       );
     }
 
-    const { error: upsertError } = await supabase.from("integrations").upsert(
+    // Store tokens
+    const { error: upsertError } = await supabaseAdmin.from("integrations").upsert(
       {
         user_id: session.user.id,
         provider: "gmail",
@@ -55,8 +56,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Log the integration activity
-    await supabase.from("activity_log").insert({
+    // Log activity
+    await supabaseAdmin.from("activity_log").insert({
       user_id: session.user.id,
       action: "integration.connected",
       entity_type: "integration",
@@ -83,12 +84,12 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-    if (sessionError || !session?.user) {
+    const { auth } = await import("@/lib/auth");
+    const session = await auth.api.getSession({
+      headers: req.headers,
+    });
+
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -102,7 +103,7 @@ export async function POST(req: NextRequest) {
 
     const tokens = await handleGmailCallback(code);
 
-    const { error: upsertError } = await supabase.from("integrations").upsert(
+    const { error: upsertError } = await supabaseAdmin.from("integrations").upsert(
       {
         user_id: session.user.id,
         provider: "gmail",
@@ -118,6 +119,13 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
+
+    await supabaseAdmin.from("activity_log").insert({
+      user_id: session.user.id,
+      action: "integration.connected",
+      entity_type: "integration",
+      meta: { provider: "gmail" },
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {

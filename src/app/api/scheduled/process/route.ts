@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { sendEmail } from "@/lib/gmail-service";
 import { getGmailTokens } from "@/lib/integration-tokens";
 
@@ -12,6 +11,8 @@ export const dynamic = "force-dynamic";
  * Sends any drafts whose `scheduled_at` is in the past and status is "scheduled".
  * Designed to be called by a cron job (e.g. every 5 minutes).
  * Secured by an optional CRON_SECRET query param.
+ *
+ * Uses supabaseAdmin directly (service_role) since cron has no user context.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = supabaseAdmin;
     const now = new Date().toISOString();
 
     // Fetch due scheduled drafts

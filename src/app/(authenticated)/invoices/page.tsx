@@ -17,10 +17,27 @@ export default function InvoicesPage() {
   });
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<any>(null);
+  const [search, setSearch] = useState("");
+  const [urgency, setUrgency] = useState<"all" | "urgent">("all");
 
   if (isLoading) return <div className="p-8 text-sm text-muted-foreground">Loading invoices…</div>;
 
   const filtered = (data ?? []).filter((i: any) => {
+    if (tab === "pending") return i.status === "pending" || i.status === "overdue";
+    if (tab === "sent") return i.status === "sent";
+    if (tab === "paid") return i.status === "paid";
+    return true;
+  });
+  const filteredWithUrgency = filtered.filter((i: any) => {
+    const matchesSearch = !search || 
+      i.client_name?.toLowerCase().includes(search.toLowerCase()) ||
+      i.client_email?.toLowerCase().includes(search.toLowerCase());
+    const matchesUrgency = urgency === "all" || (urgency === "urgent" && 
+      (i.status === "overdue" && (
+        Math.floor((Date.now() - new Date(i.due_date).getTime()) / 86400000) >= 7
+      )));
+    return matchesSearch && matchesUrgency;
+  });
     if (tab === "pending") return i.status === "pending" || i.status === "overdue";
     if (tab === "sent") return i.status === "sent";
     if (tab === "paid") return i.status === "paid";
@@ -60,7 +77,31 @@ export default function InvoicesPage() {
         }
       />
       <div className="p-6 md:p-10">
-        {filtered.length === 0 ? (
+        {/* Search & Filter */}
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 max-w-xs">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by client name or email..."
+              className="w-full rounded-sm border border-border bg-background px-3 py-2 pl-8 text-sm outline-none focus:border-foreground"
+            />
+            <svg className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </div>
+          <div className="flex gap-1 rounded-sm border border-border p-1">
+            {(["all", "urgent"]).map((u) => (
+              <button
+                key={u}
+                onClick={() => setUrgency(u)}
+                className={"rounded-sm px-3 py-1.5 text-xs capitalize " + (urgency === u ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground")}
+              >
+                {u === "all" ? "All" : "Urgent (7d+ overdue)"}
+              </button>
+            ))}
+          </div>
+        </div>
+        {filteredWithUrgency.length === 0 ? (
           <EmptyState
             title={
               tab === "pending"

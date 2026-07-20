@@ -1,8 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { signOut } from "@/lib/auth-client";
 import {
   LayoutDashboard,
   FileText,
@@ -31,10 +33,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const pathname = usePathname();
 
-  const signOut = async () => {
+  const handleSignOut = async () => {
     await queryClient.cancelQueries();
     queryClient.clear();
-    await supabase.auth.signOut();
+    await signOut();
     router.replace("/auth");
   };
 
@@ -64,7 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </nav>
         <button
-          onClick={signOut}
+          onClick={handleSignOut}
           className="m-2 flex items-center gap-3 rounded-sm px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           <LogOut className="h-4 w-4" />
@@ -77,7 +79,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Link href="/dashboard" className="flex items-center gap-2">
           <img src="/logo.png" alt="Logo" className="h-24 w-auto" />
         </Link>
-        <button onClick={signOut} className="text-sm text-muted-foreground">Sign out</button>
+        <button onClick={handleSignOut} className="text-sm text-muted-foreground">Sign out</button>
       </div>
 
       <main className="flex-1 pt-24 md:pt-0">

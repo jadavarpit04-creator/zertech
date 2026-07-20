@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { requireAuth, AuthError } from "@/lib/auth-helpers";
 import { z } from "zod";
 import {
   generateDraft,
@@ -45,15 +44,8 @@ const requestSchema = z.discriminatedUnion("kind", [
 
 export async function POST(req: NextRequest) {
   try {
-    // Authenticate (same pattern as /api/fn)
-    const supabase = createRouteHandlerClient({ cookies });
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-    if (sessionError || !session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Authenticate via Better-Auth
+    await requireAuth(req.headers);
 
     // Parse and validate
     const body = await req.json();
@@ -81,6 +73,9 @@ export async function POST(req: NextRequest) {
     const result = await generateDraft(kind, tone, data);
     return NextResponse.json(result);
   } catch (err: any) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: 401 });
+    }
     console.error("[API ai/draft]", err);
     return NextResponse.json(
       { error: err.message ?? "Internal error" },

@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { getGmailOAuthUrl } from "@/lib/api-client";
 import { PageHeader } from "@/components/app-shell";
 import {
@@ -79,6 +78,12 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(0);
   const [tone, setTone] = useState("professional");
   const [busy, setBusy] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvRows, setCsvRows] = useState(0);
+  const [csvLoading, setCsvLoading] = useState(false);
+  const [csvProgress, setCsvProgress] = useState(0);
+  const [csvTotal, setCsvTotal] = useState(0);
+  const [csvResult, setCsvResult] = useState<string | null>(null);
 
   const next = () => {
     if (step < steps.length - 1) setStep(step + 1);
@@ -95,6 +100,64 @@ export default function OnboardingPage() {
 
   const finish = () => {
     router.push("/dashboard");
+  };
+
+  const handleCSVUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvFile(file);
+    setCsvResult(null);
+    // Count rows
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+      setCsvRows(lines.length);
+    };
+    reader.readAsText(file);
+  };
+
+  const importCSVData = async () => {
+    if (!csvFile) return;
+    setCsvLoading(true);
+    setCsvResult(null);
+    try {
+      const text = await csvFile.text();
+      const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+      setCsvTotal(lines.length);
+
+      // Detect if these look like invoices or leads
+      const header = lines[0].toLowerCase();
+      const isInvoices = header.includes("amount") || header.includes("due_date");
+
+      let imported = 0;
+      for (let i = 0; i < lines.length; i++) {
+        const parts = lines[i].split(",").map(s => s.trim());
+        try {
+          if (isInvoices) {
+            const [client_name, client_email, amount, due_date] = parts;
+            const { importInvoices } = await import("@/lib/api-client");
+            await importInvoices({ rows: [{ client_name, client_email, amount: Number(amount), due_date }] });
+          } else {
+            const [name, email, source, ...notesParts] = parts;
+            const { importLeads } = await import("@/lib/api-client");
+            await importLeads({ rows: [{ name, email, source: source || undefined, notes: notesParts.join(",") || undefined }] });
+          }
+          imported++;
+          setCsvProgress(i + 1);
+        } catch (e: any) {
+          console.error("Row import error:", e.message);
+        }
+      }
+
+      setCsvResult(`Successfully imported ${imported} of ${lines.length} ${isInvoices ? "invoices" : "leads"}.`);
+      toast.success(`Imported ${imported} ${isInvoices ? "invoices" : "leads"}`);
+    } catch (e: any) {
+      setCsvResult("Import failed: " + e.message);
+      toast.error(e.message);
+    } finally {
+      setCsvLoading(false);
+    }
   };
 
   return (
@@ -208,12 +271,46 @@ export default function OnboardingPage() {
 
           {step === 2 && (
             <div className="mt-6 space-y-3">
-              <button className="flex w-full items-center justify-center rounded-sm border border-dashed border-border bg-background px-4 py-8 text-sm text-muted-foreground hover:border-foreground hover:text-foreground">
-                Upload CSV (invoices or leads)
-              </button>
+              <div className="space-y-3">
+              <label className="flex w-full cursor-pointer flex-col items-center justify-center rounded-sm border border-dashed border-border bg-background px-4 py-8 text-sm text-muted-foreground hover:border-foreground hover:text-foreground">
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleCSVUpload}
+                  className="hidden"
+                />
+                <span className="font-medium">{csvFile ? csvFile.name : "Upload CSV (invoices or leads)"}</span>
+                <span className="mt-1 text-xs opacity-60">
+                  {csvFile ? "Click to change file" : "CSV format: name/email/amount/due_date or name/email/source/notes"}
+                </span>
+              </label>
+              {csvFile && !csvLoading && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {csvRows} rows detected
+                  </span>
+                  <button
+                    onClick={importCSVData}
+                    className="rounded-sm bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+                  >
+                    Import {csvRows} rows
+                  </button>
+                </div>
+              )}
+              {csvLoading && (
+                <div className="text-center text-xs text-muted-foreground">
+                  Importing... {csvProgress} / {csvTotal}
+                </div>
+              )}
+              {csvResult && (
+                <div className="rounded-sm bg-muted p-3 text-xs text-muted-foreground">
+                  {csvResult}
+                </div>
+              )}
               <p className="text-center text-xs text-muted-foreground">
                 Or paste CSV rows in the Invoices and Leads pages later.
               </p>
+            </div>
             </div>
           )}
 

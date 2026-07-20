@@ -58,7 +58,7 @@ export async function getSlackWebhook(
     .from("integrations")
     .select("meta")
     .eq("user_id", userId)
-    .eq("provider", "slack")
+    .eq("provider", "telegram")
     .eq("connected", true)
     .single();
   return ((data?.meta as any)?.webhook_url as string) ?? null;

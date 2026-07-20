@@ -57,10 +57,9 @@ export async function getEscalationSequence(
 }
 
 // --------------- Invoice handlers ---------------
-export async function listInvoices(supabase: SupabaseClient) {
+export async function listInvoices(supabase: SupabaseClient, userId: string) {
   const { data, error } = await supabase
-    .from("invoices")
-    .select("*")
+    .from("invoices").select("*").eq("user_id", userId)
     .order("due_date", { ascending: true });
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -90,8 +89,7 @@ export async function runInvoiceScan(supabase: SupabaseClient, userId: string) {
   const today = new Date().toISOString().slice(0, 10);
   // Mark overdue
   const { data: overdueList } = await supabase
-    .from("invoices")
-    .select("*")
+    .from("invoices").select("*").eq("user_id", userId)
     .lt("due_date", today)
     .eq("status", "pending");
   if (overdueList && overdueList.length) {
@@ -104,13 +102,13 @@ export async function runInvoiceScan(supabase: SupabaseClient, userId: string) {
   const { data: setting } = await supabase
     .from("workflow_settings")
     .select("*")
+    .eq("user_id", userId)
     .eq("workflow", "invoice")
     .maybeSingle();
   const autoSend = setting?.auto_send ?? false;
   // Find overdue invoices without a pending draft
   const { data: overdue } = await supabase
-    .from("invoices")
-    .select("*")
+    .from("invoices").select("*").eq("user_id", userId)
     .eq("status", "overdue");
   let created = 0;
   for (const inv of overdue ?? []) {
@@ -232,10 +230,11 @@ async function notifyNewDraft(
 }
 
 // --------------- Lead handlers ---------------
-export async function listLeads(supabase: SupabaseClient) {
+export async function listLeads(supabase: SupabaseClient, userId: string) {
   const { data, error } = await supabase
     .from("leads")
     .select("*")
+    .eq("user_id", userId)
     .order("score", { ascending: false })
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
@@ -260,6 +259,7 @@ export async function importLeads(
   const { data: setting } = await supabase
     .from("workflow_settings")
     .select("*")
+    .eq("user_id", userId)
     .eq("workflow", "lead")
     .maybeSingle();
   const autoSend = setting?.auto_send ?? false;
@@ -300,7 +300,22 @@ Talk soon,`;
       entity_id: lead.id,
       meta: { draft_id: draft?.id, subject, score: anyLead.score },
     });
-    if (draft && !autoSend) {
+        if (autoSend && draft && draft.recipient_email) {
+      try {
+        const tokens = await getGmailTokens(supabase, userId);
+        if (tokens) {
+          await sendEmail(tokens.accessToken, tokens.refreshToken, {
+            to: draft.recipient_email,
+            subject: draft.subject ?? "Follow-up",
+            body: draft.body ?? "",
+          });
+        }
+      } catch (e) {
+        console.error("[importLeads] Auto-send failed:", e.message);
+      }
+    }
+
+if (draft && !autoSend) {
       await notifyNewDraft(supabase, userId, {
         id: draft.id,
         kind: "lead",
@@ -313,20 +328,22 @@ Talk soon,`;
 }
 
 // --------------- Draft handlers ---------------
-export async function listArchivedDrafts(supabase: SupabaseClient) {
+export async function listArchivedDrafts(supabase: SupabaseClient, userId: string) {
   const { data, error } = await supabase
     .from("drafts")
     .select("*")
+    .eq("user_id", userId)
     .eq("status", "discarded")
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) throw new Error(error.message);
   return data ?? [];
 }
-export async function listPendingDrafts(supabase: SupabaseClient) {
+export async function listPendingDrafts(supabase: SupabaseClient, userId: string) {
   const { data, error } = await supabase
     .from("drafts")
     .select("*")
+    .eq("user_id", userId)
     .eq("status", "pending")
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
@@ -361,28 +378,35 @@ export async function sendDraft(
   body: { id: string }
 ) {
   const { id } = z.object({ id: z.string() }).parse(body);
-  const { data: draft, error } = await supabase
+
+  // Read the draft first without changing status
+  const { data: draft, error: fetchError } = await supabase
+    .from("drafts")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (fetchError) throw new Error(fetchError.message);
+  if (!draft) throw new Error("Draft not found");
+
+  // Attempt to send email BEFORE marking as sent
+  if (draft.recipient_email) {
+    const tokens = await getGmailTokens(supabase, userId);
+    if (!tokens) {
+      throw new Error("Gmail not connected. Connect Gmail first in Settings.");
+    }
+    await sendEmail(tokens.accessToken, tokens.refreshToken, {
+      to: draft.recipient_email,
+      subject: draft.subject ?? "Follow-up",
+      body: draft.body ?? "",
+    });
+  }
+
+  // Only mark as sent after successful email send
+  const { error } = await supabase
     .from("drafts")
     .update({ status: "sent", sent_at: new Date().toISOString() })
-    .eq("id", id)
-    .select()
-    .single();
+    .eq("id", id);
   if (error) throw new Error(error.message);
-
-  if (draft?.recipient_email) {
-    const tokens = await getGmailTokens(supabase, userId);
-    if (tokens) {
-      try {
-        await sendEmail(tokens.accessToken, tokens.refreshToken, {
-          to: draft.recipient_email,
-          subject: draft.subject ?? "Follow-up",
-          body: draft.body ?? "",
-        });
-      } catch (e: any) {
-        console.error("[sendDraft] Gmail send failed:", e.message);
-      }
-    }
-  }
 
   if (draft?.kind === "lead" && draft.source_id) {
     await supabase
@@ -456,7 +480,7 @@ export async function discardDraft(
 // --------------- History ---------------
 export async function reportsSummary(
   supabase: SupabaseClient,
-  _userId: string,
+  userId: string,
   body?: { period?: "30d" | "90d" | "year" }
 ) {
   const period = body?.period ?? "30d";
@@ -474,17 +498,18 @@ export async function reportsSummary(
     leadsContacted,
     sentThisPeriod,
   ] = await Promise.all([
-    supabase.from("invoices").select("id", { count: "exact", head: true }),
-    supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "paid"),
-    supabase.from("leads").select("id", { count: "exact", head: true }),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("status", "contacted"),
-    supabase.from("drafts").select("id", { count: "exact", head: true }).eq("status", "sent").gte("sent_at", startIso),
+    supabase.from("invoices").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "paid").eq("user_id", userId),
+    supabase.from("leads").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("leads").select("id", { count: "exact", head: true }).eq("status", "contacted").eq("user_id", userId),
+    supabase.from("drafts").select("id", { count: "exact", head: true }).eq("status", "sent").eq("user_id", userId).gte("sent_at", startIso),
   ]);
 
   // recovered amount: sum of invoice amounts marked paid in period
   const { data: recoveredInvoices } = await supabase
     .from("invoices")
     .select("amount")
+    .eq("user_id", userId)
     .eq("status", "paid")
     .gte("created_at", startIso);
   const recoveredAmount =
@@ -494,6 +519,7 @@ export async function reportsSummary(
   const { data: sentInvoiceDrafts } = await supabase
     .from("drafts")
     .select("sent_at, source_id")
+    .eq("user_id", userId)
     .eq("kind", "invoice")
     .eq("status", "sent")
     .gte("sent_at", startIso)
@@ -532,10 +558,11 @@ export async function reportsSummary(
 }
 
 // --------------- Templates ---------------
-export async function listTemplates(supabase: SupabaseClient, _userId: string) {
+export async function listTemplates(supabase: SupabaseClient, userId: string) {
   const { data, error } = await supabase
     .from("email_templates")
     .select("*")
+    .eq("user_id", userId)
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -556,7 +583,7 @@ export async function saveTemplate(
     })
     .parse(body);
   if (id) {
-    const { error } = await supabase.from("email_templates").update({ kind, name, subject, body: content }).eq("id", id);
+    const { error } = await supabase.from("email_templates").update({ kind, name, subject, body: content }).eq("id", id).eq("user_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   }
@@ -600,10 +627,11 @@ export async function updateProfile(
   return { ok: true };
 }
 
-export async function listScheduledDrafts(supabase: SupabaseClient) {
+export async function listScheduledDrafts(supabase: SupabaseClient, userId: string) {
   const { data, error } = await supabase
     .from("drafts")
     .select("*")
+    .eq("user_id", userId)
     .eq("status", "scheduled")
     .order("scheduled_at", { ascending: true })
     .limit(100);
@@ -611,10 +639,11 @@ export async function listScheduledDrafts(supabase: SupabaseClient) {
   return data ?? [];
 }
 
-export async function listActivity(supabase: SupabaseClient) {
+export async function listActivity(supabase: SupabaseClient, userId: string) {
   const { data, error } = await supabase
     .from("activity_log")
     .select("*")
+    .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(200);
   if (error) throw new Error(error.message);
@@ -622,7 +651,7 @@ export async function listActivity(supabase: SupabaseClient) {
 }
 
 // --------------- Dashboard ---------------
-export async function dashboardSummary(supabase: SupabaseClient) {
+export async function dashboardSummary(supabase: SupabaseClient, userId: string) {
   const today = new Date();
   const todayStart = today.toISOString().slice(0, 10);
   const todayEnd = `${todayStart}T23:59:59.999Z`;
@@ -631,7 +660,7 @@ export async function dashboardSummary(supabase: SupabaseClient) {
     supabase
       .from("drafts")
       .select("id", { count: "exact", head: true })
-      .eq("status", "pending"),
+      .eq("status", "pending").eq("user_id", userId),
     supabase
       .from("drafts")
       .select("id", { count: "exact", head: true })
@@ -639,11 +668,11 @@ export async function dashboardSummary(supabase: SupabaseClient) {
     supabase
       .from("invoices")
       .select("id", { count: "exact", head: true })
-      .eq("status", "overdue"),
+      .eq("status", "overdue").eq("user_id", userId),
     supabase
       .from("leads")
       .select("id", { count: "exact", head: true })
-      .eq("status", "new"),
+      .eq("status", "new").eq("user_id", userId),
     supabase
       .from("drafts")
       .select("id", { count: "exact", head: true })
@@ -713,6 +742,7 @@ export async function dashboardSummary(supabase: SupabaseClient) {
   const { data: recent } = await supabase
     .from("activity_log")
     .select("*")
+    .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(6);
 
@@ -731,7 +761,7 @@ export async function dashboardSummary(supabase: SupabaseClient) {
 // --------------- Export ---------------
 export async function exportData(
   supabase: SupabaseClient,
-  _userId: string,
+  userId: string,
   body: { type: "invoices" | "leads" | "history" }
 ) {
   const { type } = z
@@ -741,8 +771,7 @@ export async function exportData(
   switch (type) {
     case "invoices": {
       const { data, error } = await supabase
-        .from("invoices")
-        .select("*")
+        .from("invoices").select("*").eq("user_id", userId)
         .order("due_date", { ascending: true });
       if (error) throw new Error(error.message);
       return data ?? [];
@@ -751,6 +780,7 @@ export async function exportData(
       const { data, error } = await supabase
         .from("leads")
         .select("*")
+        .eq("user_id", userId)
         .order("created_at", { ascending: false });
       if (error) throw new Error(error.message);
       return data ?? [];
@@ -759,6 +789,7 @@ export async function exportData(
       const { data, error } = await supabase
         .from("activity_log")
         .select("*")
+        .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw new Error(error.message);
@@ -820,17 +851,17 @@ export async function scheduleDraft(
 }
 
 // --------------- Settings ---------------
-export async function listSettings(supabase: SupabaseClient) {
+export async function listSettings(supabase: SupabaseClient, userId: string) {
   const [{ data: workflows }, { data: integrations }] = await Promise.all([
-    supabase.from("workflow_settings").select("*").order("workflow"),
-    supabase.from("integrations").select("*").order("provider"),
+    supabase.from("workflow_settings").select("*").eq("user_id", userId).order("workflow"),
+    supabase.from("integrations").select("*").eq("user_id", userId).order("provider"),
   ]);
   return { workflows: workflows ?? [], integrations: integrations ?? [] };
 }
 
 export async function updateWorkflow(
   supabase: SupabaseClient,
-  _userId: string,
+  userId: string,
   body: { workflow: string; auto_send: boolean }
 ) {
   const { workflow, auto_send } = z
@@ -839,7 +870,7 @@ export async function updateWorkflow(
   const { error } = await supabase
     .from("workflow_settings")
     .update({ auto_send, approval_required: !auto_send })
-    .eq("workflow", workflow);
+    .eq("user_id", userId).eq("workflow", workflow);
   if (error) throw new Error(error.message);
   return { ok: true };
 }

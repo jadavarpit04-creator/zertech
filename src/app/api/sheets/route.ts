@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { requireAuth, AuthError } from "@/lib/auth-helpers";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import * as sheets from "@/lib/sheets-service";
 
 /**
@@ -15,35 +15,33 @@ export async function GET(req: NextRequest) {
 
     // --- OAuth callback from Google redirect ---
     if (code) {
-      const supabase = createRouteHandlerClient({ cookies });
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-      if (sessionError || !session?.user) {
+      const { auth } = await import("@/lib/auth");
+      const session = await auth.api.getSession({
+        headers: req.headers,
+      });
+
+      if (!session?.user) {
         return NextResponse.redirect(new URL("/auth", req.url));
       }
 
       const redirectUri = `${req.nextUrl.origin}/api/sheets`;
       const tokens = await sheets.handleSheetsCallback(code, redirectUri);
 
-      await supabase
-        .from("integrations")
-        .upsert(
-          {
-            user_id: session.user.id,
-            provider: "sheets",
-            connected: true,
-            meta: {
-              access_token: tokens.access_token,
-              refresh_token: tokens.refresh_token,
-              expiry_date: tokens.expiry_date,
-            },
+      await supabaseAdmin.from("integrations").upsert(
+        {
+          user_id: session.user.id,
+          provider: "sheets",
+          connected: true,
+          meta: {
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
+            expiry_date: tokens.expiry_date,
           },
-          { onConflict: "user_id,provider" }
-        );
+        },
+        { onConflict: "user_id,provider" }
+      );
 
-      await supabase.from("activity_log").insert({
+      await supabaseAdmin.from("activity_log").insert({
         user_id: session.user.id,
         action: "integration.connected",
         entity_type: "integration",
@@ -77,15 +75,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-    if (sessionError || !session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const { supabase, user } = await requireAuth(req.headers);
     const { searchParams } = new URL(req.url);
     const action = searchParams.get("action") ?? "connect";
 
@@ -102,24 +92,22 @@ export async function POST(req: NextRequest) {
       const redirectUri = `${req.nextUrl.origin}/api/sheets`;
       const tokens = await sheets.handleSheetsCallback(code, redirectUri);
 
-      await supabase
-        .from("integrations")
-        .upsert(
-          {
-            user_id: session.user.id,
-            provider: "sheets",
-            connected: true,
-            meta: {
-              access_token: tokens.access_token,
-              refresh_token: tokens.refresh_token,
-              expiry_date: tokens.expiry_date,
-            },
+      await supabase.from("integrations").upsert(
+        {
+          user_id: user.id,
+          provider: "sheets",
+          connected: true,
+          meta: {
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
+            expiry_date: tokens.expiry_date,
           },
-          { onConflict: "user_id,provider" }
-        );
+        },
+        { onConflict: "user_id,provider" }
+      );
 
       await supabase.from("activity_log").insert({
-        user_id: session.user.id,
+        user_id: user.id,
         action: "integration.connected",
         entity_type: "integration",
         meta: { provider: "sheets" },
@@ -171,7 +159,7 @@ export async function POST(req: NextRequest) {
       const { data: integration } = await supabase
         .from("integrations")
         .select("meta")
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .eq("provider", "sheets")
         .single();
 
@@ -195,8 +183,8 @@ export async function POST(req: NextRequest) {
             hour12: false,
           }),
           client,
-          invoiceNumber: draft.source_id?.slice(0, 8) ?? "\u2014",
-          amount: `\u20B9${amount.toFixed(2)}`,
+          invoiceNumber: draft.source_id?.slice(0, 8) ?? "—",
+          amount: `₹${amount.toFixed(2)}`,
           status: draft.status,
         }
       );
@@ -209,6 +197,9 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   } catch (err: any) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: 401 });
+    }
     console.error("[API sheets POST]", err);
     return NextResponse.json(
       { error: err.message ?? "Internal error" },

@@ -68,7 +68,9 @@ function invoiceTemplate(
         ``,
         `Just a quick reminder that invoice ${invRef} for ${formattedAmount} was due on ${due_date} and is now ${days_overdue} day${days_overdue === 1 ? "" : "s"} overdue.`,
         ``,
-        `Could you please take a look when you get a chance? Happy to answer any questions or set up a payment plan if that's easier.`,
+        `You can pay here: {{payment_link}}
+
+If you have any questions or need to set up a payment plan, just let me know.`,
         ``,
         `Thanks for your time,`,
         ``,
@@ -83,7 +85,11 @@ function invoiceTemplate(
         ``,
         `This is a reminder regarding invoice ${invRef} for ${formattedAmount}, which was due on ${due_date} and is now ${days_overdue} days past due.`,
         ``,
-        `We kindly request that payment be remitted at your earliest convenience. If you have already sent payment, please disregard this notice.`,
+        `We kindly request that payment be remitted at your earliest convenience.
+
+Pay here: {{payment_link}}
+
+If you have already sent payment, please disregard this notice.`,
         ``,
         `If there are any questions or concerns regarding this invoice, please contact us directly.`,
         ``,
@@ -100,7 +106,11 @@ function invoiceTemplate(
         ``,
         `This is a FINAL NOTICE for invoice ${invRef} for ${formattedAmount}, which was due on ${due_date} and is now ${days_overdue} days past due.`,
         ``,
-        `Immediate payment is required to avoid any further escalation, including service suspension and referral to our collections department.`,
+        `Immediate payment is required to avoid any further escalation.
+
+Pay immediately: {{payment_link}}
+
+If you believe there has been an error, contact us immediately.`,
         ``,
         `Please remit payment in full today. If you believe there has been an error, contact us immediately.`,
         ``,
@@ -390,7 +400,7 @@ export async function generateInvoiceDraft(
     `Due date: ${due_date}`,
     `Days overdue: ${days_overdue}`,
     `Include the escalation label "${label}" if appropriate.`,
-    `Respond with a JSON object containing "subject" and "body".`,
+    `Include a payment link placeholder {{payment_link}} in the body. Respond with a JSON object containing "subject" and "body".`,
   ].join("\n");
 
   const raw = await callAI(prompt);

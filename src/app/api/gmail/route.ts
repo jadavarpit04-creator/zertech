@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { requireAuth, AuthError } from "@/lib/auth-helpers";
 import {
   initGmailOAuth,
   handleGmailCallback,
@@ -39,22 +38,12 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-    if (sessionError || !session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const { supabase, user } = await requireAuth(req.headers);
     const body = await req.json().catch(() => ({}));
     const { action } = body;
 
     switch (action) {
       // ── OAuth callback ───────────────────────────────────────
-      // Exchange the auth code Google sent back for access + refresh tokens.
-      // Stores the tokens in the `integrations` table and sets connected=true.
       case "callback": {
         const { code } = body;
         if (!code) {
@@ -70,7 +59,7 @@ export async function POST(req: NextRequest) {
           .from("integrations")
           .upsert(
             {
-              user_id: session.user.id,
+              user_id: user.id,
               provider: "gmail",
               connected: true,
               token_data: tokens,
@@ -89,13 +78,11 @@ export async function POST(req: NextRequest) {
       }
 
       // ── Email sync ───────────────────────────────────────────
-      // Fetches the last 30 days of emails via Gmail API, persists
-      // them in the `emails` table, then runs invoice + lead detection.
       case "sync": {
         const { data: integration } = await supabase
           .from("integrations")
           .select("*")
-          .eq("user_id", session.user.id)
+          .eq("user_id", user.id)
           .eq("provider", "gmail")
           .maybeSingle();
 
@@ -117,7 +104,7 @@ export async function POST(req: NextRequest) {
         const emails = await syncEmails(
           tokenData.accessToken,
           tokenData.refreshToken,
-          session.user.id
+          user.id
         );
 
         if (emails.length === 0) {
@@ -129,7 +116,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Persist to the emails table
-        await insertEmails(supabase, session.user.id, emails);
+        await insertEmails(supabase, user.id, emails);
 
         // Run detection
         const invoices = detectInvoices(emails);
@@ -155,7 +142,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (updates.length > 0) {
-          await updateEmailDetection(supabase, session.user.id, updates);
+          await updateEmailDetection(supabase, user.id, updates);
         }
 
         return NextResponse.json({
@@ -166,10 +153,8 @@ export async function POST(req: NextRequest) {
       }
 
       // ── Detection-only (re-run on stored emails) ─────────────
-      // Re-runs invoice/lead detection on previously synced emails
-      // without fetching new data from Gmail.
       case "detect": {
-        const stored = await getStoredEmails(supabase, session.user.id, {
+        const stored = await getStoredEmails(supabase, user.id, {
           limit: 200,
         });
 
@@ -202,7 +187,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (updates.length > 0) {
-          await updateEmailDetection(supabase, session.user.id, updates);
+          await updateEmailDetection(supabase, user.id, updates);
         }
 
         return NextResponse.json({
@@ -218,6 +203,9 @@ export async function POST(req: NextRequest) {
         );
     }
   } catch (err: any) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: 401 });
+    }
     console.error("[Gmail API]", err);
     return NextResponse.json(
       { error: err.message ?? "Internal error" },
