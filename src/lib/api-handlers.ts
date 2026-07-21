@@ -14,6 +14,7 @@ const invoiceRowSchema = z.object({
   client_email: z.string().email(),
   amount: z.number().nonnegative(),
   due_date: z.string(),
+  invoice_number: z.string().optional(),
 });
 const leadRowSchema = z.object({
   name: z.string().min(1),
@@ -23,16 +24,33 @@ const leadRowSchema = z.object({
 });
 
 // --------------- Helpers ---------------
-function scoreLead(input: { source?: string; notes?: string }): number {
-  const text = `${input.source ?? ""} ${input.notes ?? ""}`.toLowerCase();
-  let score = 3;
-  const strong = ["budget", "timeline", "start date", "urgent", "asap", "sign", "contract", "purchase", "buy now"];
-  const medium = ["quote", "proposal", "pricing", "demo", "call", "meeting", "interested"];
-  const weak = ["newsletter", "general", "info", "curious", "just looking"];
-  if (strong.some((k) => text.includes(k))) score += 2;
-  else if (medium.some((k) => text.includes(k))) score += 1;
-  if (weak.some((k) => text.includes(k))) score -= 1;
-  return Math.max(1, Math.min(5, score));
+async function aiScoreLead(input: { source?: string; notes?: string }): Promise<number> {
+  const text = `${input.source ?? ""} ${input.notes ?? ""}`.trim();
+  if (!text) return 3;
+
+  try {
+    const res = await fetch(`${process.env.OPENROUTER_API_BASE ?? "https://openrouter.ai/api/v1"}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are a lead scoring assistant. Score the lead from 1-5 based on intent signals (budget, timeline, urgency, specific needs). Return ONLY a number between 1 and 5." },
+          { role: "user", content: `Lead info: ${text}` },
+        ],
+        max_tokens: 10,
+      }),
+    });
+    if (!res.ok) return 3;
+    const data = await res.json();
+    const score = parseInt(data.choices?.[0]?.message?.content?.trim() ?? "3", 10);
+    return isNaN(score) ? 3 : Math.max(1, Math.min(5, score));
+  } catch {
+    return 3;
+  }
 }
 
 // --------------- Escalation sequence ---------------
@@ -55,6 +73,15 @@ export async function getEscalationSequence(
 ) {
   return escalationStep(body.daysOverdue);
 }
+
+const updateInvoiceSchema = z.object({
+  id: z.string(),
+  client_name: z.string().min(1),
+  client_email: z.string().email(),
+  amount: z.number().nonnegative(),
+  due_date: z.string(),
+  status: z.string().optional(),
+});
 
 // --------------- Invoice handlers ---------------
 export async function listInvoices(supabase: SupabaseClient, userId: string) {
@@ -83,6 +110,38 @@ export async function importInvoices(
     meta: { count: rows.length },
   });
   return { count: rows.length };
+}
+
+export async function updateInvoice(
+  supabase: SupabaseClient,
+  userId: string,
+  body: unknown
+) {
+  const { id, client_name, client_email, amount, due_date, status } = updateInvoiceSchema.parse(body);
+  const updates: Record<string, any> = { client_name, client_email, amount, due_date };
+  if (status) updates.status = status;
+  const { error } = await supabase
+    .from("invoices")
+    .update(updates)
+    .eq("id", id)
+    .eq("user_id", userId);
+  if (error) throw new Error(error.message);
+  return { ok: true };
+}
+
+export async function deleteInvoice(
+  supabase: SupabaseClient,
+  userId: string,
+  body: { id: string }
+) {
+  const { id } = z.object({ id: z.string() }).parse(body);
+  const { error } = await supabase
+    .from("invoices")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId);
+  if (error) throw new Error(error.message);
+  return { ok: true };
 }
 
 export async function runInvoiceScan(supabase: SupabaseClient, userId: string) {
@@ -246,10 +305,16 @@ export async function importLeads(
   userId: string,
   body: { rows: unknown }
 ) {
-  const rows = leadRowSchema
-    .array()
-    .parse(body.rows)
-    .map((r) => ({ ...r, user_id: userId, score: scoreLead(r) }));
+  const parsedRows = leadRowSchema.array().parse(body.rows);
+  const rows = await Promise.all(
+    parsedRows.map(async (r) => {
+      let score = await aiScoreLead(r);
+      const source = (r.source ?? "").toLowerCase();
+      if (source.includes("linkedin") || source.includes("referral")) score += 1;
+      else if (!source.includes("website") && source.length > 0) score -= 1;
+      return { ...r, user_id: userId, score: Math.max(1, Math.min(5, score)) };
+    })
+  );
   const { data: inserted, error } = await supabase
     .from("leads")
     .insert(rows)
@@ -327,6 +392,34 @@ if (draft && !autoSend) {
   return { count: inserted?.length ?? 0 };
 }
 
+export async function updateLeadStatus(
+  supabase: SupabaseClient,
+  userId: string,
+  body: { id: string; status: "new" | "contacted" | "qualified" | "lost" }
+) {
+  const { id, status } = z.object({
+    id: z.string(),
+    status: z.enum(["new", "contacted", "qualified", "lost"]),
+  }).parse(body);
+
+  const { error } = await supabase
+    .from("leads")
+    .update({ status })
+    .eq("id", id)
+    .eq("user_id", userId);
+  if (error) throw new Error(error.message);
+
+  await supabase.from("activity_log").insert({
+    user_id: userId,
+    action: "lead.status_changed",
+    entity_type: "lead",
+    entity_id: id,
+    meta: { status },
+  });
+
+  return { ok: true };
+}
+
 // --------------- Draft handlers ---------------
 export async function listArchivedDrafts(supabase: SupabaseClient, userId: string) {
   const { data, error } = await supabase
@@ -388,6 +481,48 @@ export async function sendDraft(
   if (fetchError) throw new Error(fetchError.message);
   if (!draft) throw new Error("Draft not found");
 
+  // If ActivePieces webhook is configured, dispatch to it instead of sending directly
+  const apWebhook = process.env.AP_WEBHOOK_SEND_APPROVAL;
+  if (apWebhook) {
+    const tokens = await getGmailTokens(supabase, userId);
+    if (!tokens) {
+      throw new Error("Gmail not connected. Connect Gmail first in Settings.");
+    }
+
+    const { triggerSendAfterApproval } = await import("@/lib/activepieces-service");
+    const dispatched = await triggerSendAfterApproval({
+      draft_id: draft.id,
+      user_id: userId,
+      gmail_access_token: tokens.accessToken,
+      recipient_email: draft.recipient_email || "",
+      subject: draft.subject || "Follow-up",
+      body: draft.body || "",
+      related_type: draft.kind as "invoice" | "lead",
+      related_id: draft.source_id || "",
+    });
+
+    if (!dispatched) {
+      throw new Error("Failed to dispatch to ActivePieces. Check webhook URL.");
+    }
+
+    // Mark as approved — ActivePieces will mark as sent after actual send
+    await supabase
+      .from("drafts")
+      .update({ status: "approved" })
+      .eq("id", id);
+
+    await supabase.from("activity_log").insert({
+      user_id: userId,
+      action: "draft.approved",
+      entity_type: draft.kind,
+      entity_id: draft.source_id,
+      meta: { draft_id: id, sent_via: "activepieces" },
+    });
+
+    return { ok: true, sent_via: "activepieces" };
+  }
+
+  // Fallback: Direct send via Gmail API (existing behavior)
   // Attempt to send email BEFORE marking as sent
   if (draft.recipient_email) {
     const tokens = await getGmailTokens(supabase, userId);
@@ -719,24 +854,41 @@ export async function dashboardSummary(supabase: SupabaseClient, userId: string)
     }
   }
 
-  // avgResponseTime: average hours between draft creation and first send
-  const { data: sentTimes } = await supabase
+  // avgResponseTime + responseImprovement: compare current month vs last month
+  const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+  const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString();
+
+  const { data: thisMonthSent } = await supabase
     .from("drafts")
     .select("created_at, sent_at")
     .eq("status", "sent")
     .not("sent_at", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(100);
+    .gte("sent_at", startOfThisMonth);
 
-  let avgResponseTime = 0;
-  if (sentTimes && sentTimes.length > 0) {
-    const totalMs = sentTimes.reduce((sum, d) => {
-      return (
-        sum +
-        (new Date(d.sent_at).getTime() - new Date(d.created_at).getTime())
-      );
+  const { data: lastMonthSent } = await supabase
+    .from("drafts")
+    .select("created_at, sent_at")
+    .eq("status", "sent")
+    .not("sent_at", "is", null)
+    .gte("sent_at", startOfLastMonth)
+    .lte("sent_at", endOfLastMonth);
+
+  const calcAvgHours = (items: { created_at: string; sent_at: string | null }[]) => {
+    if (!items || items.length === 0) return 0;
+    const totalMs = items.reduce((sum, d) => {
+      return sum + (new Date(d.sent_at!).getTime() - new Date(d.created_at).getTime());
     }, 0);
-    avgResponseTime = Math.round(totalMs / sentTimes.length / 3600000);
+    return Math.round(totalMs / items.length / 3600000);
+  };
+
+  const avgResponseTime = calcAvgHours(thisMonthSent ?? []);
+  const lastMonthAvg = calcAvgHours(lastMonthSent ?? []);
+
+  let responseImprovement: string | null = null;
+  if (lastMonthAvg > 0) {
+    const pct = Math.round(((lastMonthAvg - avgResponseTime) / lastMonthAvg) * 100);
+    responseImprovement = pct >= 0 ? `${pct}% faster` : `${Math.abs(pct)}% slower`;
   }
 
   const { data: recent } = await supabase
@@ -755,6 +907,7 @@ export async function dashboardSummary(supabase: SupabaseClient, userId: string)
     recent: recent ?? [],
     recoveredAmount: Number(recoveredAmount.toFixed(2)),
     avgResponseTime,
+    responseImprovement,
   };
 }
 
@@ -762,10 +915,10 @@ export async function dashboardSummary(supabase: SupabaseClient, userId: string)
 export async function exportData(
   supabase: SupabaseClient,
   userId: string,
-  body: { type: "invoices" | "leads" | "history" }
+  body: { type: "invoices" | "leads" | "history" | "drafts" }
 ) {
   const { type } = z
-    .object({ type: z.enum(["invoices", "leads", "history"]) })
+    .object({ type: z.enum(["invoices", "leads", "history", "drafts"]) })
     .parse(body);
 
   switch (type) {
@@ -792,6 +945,15 @@ export async function exportData(
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(200);
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    }
+    case "drafts": {
+      const { data, error } = await supabase
+        .from("drafts")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
       if (error) throw new Error(error.message);
       return data ?? [];
     }
@@ -869,8 +1031,10 @@ export async function updateWorkflow(
     .parse(body);
   const { error } = await supabase
     .from("workflow_settings")
-    .update({ auto_send, approval_required: !auto_send })
-    .eq("user_id", userId).eq("workflow", workflow);
+    .upsert(
+      { user_id: userId, workflow, auto_send, approval_required: !auto_send },
+      { onConflict: "user_id,workflow" }
+    );
   if (error) throw new Error(error.message);
   return { ok: true };
 }
