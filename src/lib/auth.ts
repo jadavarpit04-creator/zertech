@@ -6,6 +6,7 @@ import * as authSchema from "./db/schema";
 export const auth = betterAuth({
   baseURL: process.env.NEXT_PUBLIC_APP_URL ?? "https://zertech-iota.vercel.app",
   secret: process.env.BETTER_AUTH_SECRET ?? "zertech-better-auth-secret-2026-change-in-prod-32chars!",
+  errorURL: "/auth?error=callback_error",
   trustedOrigins: [
     "http://localhost:8080",
     "https://zertech-iota.vercel.app",
