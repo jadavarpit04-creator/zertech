@@ -85,7 +85,7 @@ export default function AuthPage() {
     setBusy(true);
     await signIn.social({
       provider: "google",
-      callbackURL: "/dashboard",
+      callbackURL: "/auth/callback",
     });
     setBusy(false);
   };
