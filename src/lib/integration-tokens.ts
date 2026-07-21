@@ -58,7 +58,7 @@ export async function getSlackWebhook(
     .from("integrations")
     .select("meta")
     .eq("user_id", userId)
-    .eq("provider", "telegram")
+    .eq("provider", "slack")
     .eq("connected", true)
     .single();
   return ((data?.meta as any)?.webhook_url as string) ?? null;
@@ -73,7 +73,7 @@ export async function getTelegramConfig(
     .from("integrations")
     .select("meta")
     .eq("user_id", userId)
-    .eq("provider", "slack")
+    .eq("provider", "telegram")
     .eq("connected", true)
     .single();
   const meta = (data?.meta as any) ?? null;
@@ -81,17 +81,3 @@ export async function getTelegramConfig(
   return { botToken: meta.telegram_bot_token, chatId: meta.telegram_chat_id };
 }
 
-/** Read the user configured Make.com webhook URL from settings meta. */
-export async function getMakeWebhook(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<string | null> {
-  const { data } = await supabase
-    .from("integrations")
-    .select("meta")
-    .eq("user_id", userId)
-    .eq("provider", "make")
-    .eq("connected", true)
-    .single();
-  return ((data?.meta as any)?.webhook_url as string) ?? null;
-}

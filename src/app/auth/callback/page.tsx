@@ -14,15 +14,8 @@ export default function AuthCallbackPage() {
       router.replace("/auth");
       return;
     }
-    // Check if user is new — hit a lightweight endpoint
-    fetch("/api/user/check-new")
-      .then((r) => r.json())
-      .then((data) => {
-        router.replace(data.isNew ? "/onboarding" : "/dashboard");
-      })
-      .catch(() => {
-        router.replace("/dashboard");
-      });
+    // Always send new sign-ups to onboarding (they can skip it)
+    router.replace("/onboarding");
   }, [session, isPending, router]);
 
   return (

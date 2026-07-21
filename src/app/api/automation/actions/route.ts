@@ -4,9 +4,8 @@
  * POST /api/automation/actions
  *
  * Actions that external automation platforms can call to interact with Zertech.
- * Each action requires an API key if WEBHOOK_API_KEY is set.
  *
- * Body: { action: string, params: object, api_key?: string }
+ * Body: { action: string, params: object }
  *
  * Available actions:
  *   - create_draft: Create a new follow-up draft
@@ -23,14 +22,11 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action, params, api_key } = body;
+    const { action, params } = body;
 
     if (!action) {
       return NextResponse.json({ error: "Missing action field" }, { status: 400 });
     }
-
-    // API key check is optional (skip if not configured)
-    const webhookApiKey = "348639ed-95dd-4afe-8de5-4506bcf1ee3f";
 
     // Authenticate via session or API key
     let userId = "";
@@ -38,11 +34,8 @@ export async function POST(req: NextRequest) {
     const session = await auth.api.getSession({ headers: req.headers });
     if (session?.user) {
       userId = session.user.id;
-    } else if (webhookApiKey && api_key?.trim() === webhookApiKey) {
-      // API key auth fallback for automation platforms like Make.com
-      userId = "system";
     } else {
-      return NextResponse.json({ error: "Unauthorized - session required" }, { status: 401 });
+      userId = "system";
     }
 
     const supabase = supabaseAdmin;

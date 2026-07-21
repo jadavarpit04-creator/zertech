@@ -7,8 +7,6 @@ import { sendEmail } from "@/lib/gmail-service";
 import { appendFollowUpRow } from "@/lib/sheets-service";
 import { getGmailTokens, getSheetsTokens, getSlackWebhook, getTelegramConfig } from "@/lib/integration-tokens";
 import { sendSlackNotification } from "@/lib/slack-service";
-import { sendMakeEvent } from "@/lib/make-service";
-import { getMakeWebhook } from "@/lib/integration-tokens";
 
 // --------------- Schemas ---------------
 const invoiceRowSchema = z.object({
@@ -195,22 +193,6 @@ Regards,`;
       });
     }
   }
-  // Notify Make.com about overdue invoices
-  if ((overdue?.length ?? 0) > 0) {
-    for (const inv of overdue ?? []) {
-      const makeWebhook = await getMakeWebhook(supabase, userId);
-      await sendMakeEvent({
-        trigger: "invoice.overdue",
-        payload: {
-          id: inv.id,
-          client_name: inv.client_name,
-          amount: inv.amount,
-          due_date: inv.due_date,
-          days_overdue: Math.max(1, Math.floor((Date.now() - new Date(inv.due_date).getTime()) / 86400000)),
-        },
-      });
-    }
-  }
   return { created, overdue: overdue?.length ?? 0 };
 }
 
@@ -244,15 +226,6 @@ async function notifyNewDraft(
     }
   } catch (e: any) {
     console.error("[notify] Telegram failed:", e.message);
-  }
-  try {
-    const makeWebhook = await getMakeWebhook(supabase, userId);
-    await sendMakeEvent({
-      trigger: "draft.created",
-      payload: draft,
-    }, makeWebhook ?? undefined);
-  } catch (e: any) {
-    console.error("[notify] Make.com failed:", e.message);
   }
 }
 
@@ -448,19 +421,6 @@ export async function sendDraft(
     entity_type: draft?.kind,
     entity_id: draft?.source_id,
     meta: { draft_id: id, sent_via: "gmail" },
-  });
-
-  // Notify Make.com
-  const makeWebhook = await getMakeWebhook(supabase, userId);
-  await sendMakeEvent({
-    trigger: "draft.sent",
-    payload: {
-      id: draft.id,
-      kind: draft.kind,
-      recipient_email: draft.recipient_email,
-      subject: draft.subject,
-      sent_at: new Date().toISOString(),
-    },
   });
 
   // Sync to Google Sheets if connected
