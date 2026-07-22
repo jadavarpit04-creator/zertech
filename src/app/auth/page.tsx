@@ -82,7 +82,6 @@ export default function AuthPage() {
         document.body.appendChild(form);
         form.submit(); // Native submit — browser handles Set-Cookie automatically
       }
-      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {
