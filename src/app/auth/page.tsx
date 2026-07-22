@@ -65,13 +65,14 @@ export default function AuthPage() {
         );
       } else {
         await signIn.email(
-          { email, password },
+          { email, password, callbackURL: window.location.origin + "/dashboard" },
           {
             onSuccess: () => {
-              // Better Auth handles redirect — callback page redirects to onboarding/dashboard
+              window.location.href = "/dashboard"; // Hard redirect to dashboard
             },
             onError: (ctx) => {
               toast.error(ctx.error.message ?? "Invalid credentials");
+              setBusy(false);
             },
           }
         );
