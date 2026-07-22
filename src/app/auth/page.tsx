@@ -64,10 +64,10 @@ export default function AuthPage() {
           }
         );
       } else {
-        // Use native form submission to ensure browser sets HttpOnly cookie
+        // Use native form submission to a custom redirect endpoint
         const form = document.createElement("form");
         form.method = "POST";
-        form.action = "/api/auth/sign-in/email";
+        form.action = "/api/auth/signin";
         form.style.display = "none";
         const addField = (name: string, value: string) => {
           const input = document.createElement("input");
@@ -80,7 +80,7 @@ export default function AuthPage() {
         addField("password", password);
         addField("callbackURL", window.location.origin + "/dashboard");
         document.body.appendChild(form);
-        form.submit(); // Native submit — browser handles Set-Cookie automatically
+        form.submit();
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
