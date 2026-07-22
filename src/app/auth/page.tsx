@@ -64,18 +64,24 @@ export default function AuthPage() {
           }
         );
       } else {
-        await signIn.email(
-          { email, password, callbackURL: window.location.origin + "/dashboard" },
-          {
-            onSuccess: () => {
-              window.location.href = "/dashboard"; // Hard redirect to dashboard
-            },
-            onError: (ctx) => {
-              toast.error(ctx.error.message ?? "Invalid credentials");
-              setBusy(false);
-            },
-          }
-        );
+        // Use native form submission to ensure browser sets HttpOnly cookie
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = "/api/auth/sign-in/email";
+        form.style.display = "none";
+        const addField = (name: string, value: string) => {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = name;
+          input.value = value;
+          form.appendChild(input);
+        };
+        addField("email", email);
+        addField("password", password);
+        addField("callbackURL", window.location.origin + "/dashboard");
+        document.body.appendChild(form);
+        form.submit(); // Native submit — browser handles Set-Cookie automatically
+      }
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
