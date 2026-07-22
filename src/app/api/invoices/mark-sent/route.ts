@@ -15,7 +15,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { invoice_id, draft_id, user_id } = await req.json();
+    const { invoice_id: rawInvoiceId, related_id, draft_id, user_id } = await req.json();
+    const invoice_id = rawInvoiceId || related_id;
     if (!invoice_id || !user_id) {
       return NextResponse.json({ error: "Missing invoice_id or user_id" }, { status: 400 });
     }
