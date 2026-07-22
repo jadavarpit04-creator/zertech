@@ -26,18 +26,19 @@ export default function AuthPage() {
   const [company, setCompany] = useState("");
   const [teamSize, setTeamSize] = useState("");
   const [busy, setBusy] = useState(false);
+  const [justSignedUp, setJustSignedUp] = useState(false);
 
   useEffect(() => {
     const m = new URLSearchParams(window.location.search).get("mode");
     if (m === "signup") setMode("signup");
   }, []);
 
-  // If already logged in, redirect to dashboard
+  // If already logged in, redirect to dashboard (but not right after sign-up)
   useEffect(() => {
-    if (session) {
+    if (session && !justSignedUp) {
       router.push("/dashboard");
     }
-  }, [session, router]);
+  }, [session, router, justSignedUp]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +54,7 @@ export default function AuthPage() {
           { email, password, name: fullName },
           {
             onSuccess: () => {
+              setJustSignedUp(true);
               toast.success("Account created! Welcome to Zertech.");
               router.push("/onboarding");
             },
@@ -66,7 +68,7 @@ export default function AuthPage() {
           { email, password },
           {
             onSuccess: () => {
-              router.push("/dashboard");
+              // Better Auth handles redirect — callback page redirects to onboarding/dashboard
             },
             onError: (ctx) => {
               toast.error(ctx.error.message ?? "Invalid credentials");
