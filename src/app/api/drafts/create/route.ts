@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
         recipient_email,
         subject,
         body: draftBody || "",
-        status: "pending_approval", // FR-5: koi direct send nahi
+        status: "pending", // FR-5: koi direct send nahi — user approval required
       })
       .select()
       .single();
