@@ -24,17 +24,30 @@ export async function POST(req: NextRequest) {
     // Hash password for our own auth (bypasses WorkOS email verification requirement)
     const passwordHash = await bcrypt.hash(password, 12);
 
-    const { error: insertError } = await supabaseAdmin.from("profiles").insert({
-      id: user.id,
-      full_name: fullName,
-      company: company ?? null,
-      team_size: teamSize ?? null,
-      password_hash: passwordHash,
-    });
+    // Direct fetch to Supabase REST API — supabaseAdmin client was failing silently
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const upsertRes = await fetch(
+      `${supabaseUrl}/rest/v1/profiles?id=eq.${user.id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+        },
+        body: JSON.stringify({
+          id: user.id,
+          full_name: fullName,
+          company: company ?? null,
+          team_size: teamSize ?? null,
+          password_hash: passwordHash,
+        }),
+      }
+    );
 
-    if (insertError) {
-      console.error("[auth/signup] profile insert error:", insertError);
-      // Don't fail the signup — profile can be created later
+    if (!upsertRes.ok) {
+      console.error("[auth/signup] profile upsert error:", await upsertRes.text());
     }
 
     const response = NextResponse.json({ ok: true, userId: user.id });
