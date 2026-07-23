@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useSignIn, useSignUp, useUser, useClerk } from "@clerk/nextjs";
@@ -29,6 +29,11 @@ export default function AuthPage() {
   const [company, setCompany] = useState("");
   const [teamSize, setTeamSize] = useState("");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  // Guards the "already logged in -> /dashboard" effect so it doesn't race with
+  // an in-flight form submission (which performs its own explicit redirect).
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     const m = new URLSearchParams(window.location.search).get("mode");
@@ -36,6 +41,12 @@ export default function AuthPage() {
   }, []);
 
   useEffect(() => {
+    // Only auto-redirect already-authenticated visitors who land on /auth
+    // without an active submission in progress. Without this guard, a
+    // successful signUp/signIn (which sets the session asynchronously) would
+    // trigger this effect and client-navigate to /dashboard, racing -- and
+    // sometimes cancelling -- the explicit window.location.href redirect below.
+    if (submittingRef.current) return;
     if (userLoaded && user) {
       router.push("/dashboard");
     }
@@ -43,11 +54,14 @@ export default function AuthPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
     setBusy(true);
+    submittingRef.current = true;
+    setError("");
 
     // Pull a human-readable message out of a Clerk error. Clerk rejects with
     // an object carrying an `errors[]` array of detailed per-field messages
-    // (e.g. "Password has been found in an online data breach…"). The generic
+    // (e.g. "Password has been found in an online data breach..."). The generic
     // `err.message` does not always surface those, so we extract them here.
     const clerkMessage = (err: unknown): string => {
       const e = err as { errors?: Array<{ long_message?: string; message?: string }> };
@@ -59,14 +73,22 @@ export default function AuthPage() {
       return "Something went wrong. Please try again.";
     };
 
+    // Centralised hard navigation. Using window.location.href (not the Next
+    // router) so the browser does a full reload and Clerk re-initialises with
+    // the fresh session cookie -- client-side router.push races with the
+    // authenticated route guard and can bounce the user back to /auth.
+    const go = (path: string) => {
+      window.location.href = path;
+    };
+
     try {
       if (mode === "signup") {
         if (!teamSize) {
-          toast.error("Please select your team size");
+          setError("Please select your team size");
           return;
         }
         if (!signUp) {
-          toast.error("Still loading — please try again in a moment.");
+          setError("Still loading -- please try again in a moment.");
           return;
         }
 
@@ -76,25 +98,34 @@ export default function AuthPage() {
           firstName: fullName,
         });
 
-        // Sign-up may not complete immediately (e.g. email verification may be
-        // required). Guard against a null session before calling setActive.
-        if (!result?.createdSessionId) {
-          toast.error(
-            "We couldn't finish creating your account. Please try again."
-          );
+        // A "complete" status means the account + session are ready. The
+        // previous code only redirected when `result.createdSessionId` was
+        // truthy and otherwise returned early -- which left users stranded on
+        // /auth even after a successful 200 (the session was created server
+        // side but the client never navigated). We now redirect whenever the
+        // status is complete, calling setActive when we have a session id.
+        if (result?.status === "complete" || result?.createdSessionId) {
+          if (result?.createdSessionId) {
+            try {
+              await setActive({ session: result.createdSessionId });
+            } catch {
+              // setActive can throw if the session is already active -- safe to ignore.
+            }
+          }
+          toast.success("Account created! Welcome to Zertech.");
+          go("/onboarding");
           return;
         }
 
-        await setActive({ session: result.createdSessionId });
-        toast.success("Account created! Welcome to Zertech.");
-        // Hard navigation so Clerk re-initialises with the fresh session
-        // cookie. Client-side router.push races with the authenticated route
-        // guard (useUser) and can bounce the user back to /auth.
-        window.location.href = "/onboarding";
+        // status is "missing_requirements" -- e.g. email/phone verification needed.
+        setError(
+          "We started creating your account but extra verification is required. " +
+            "Please check your email and complete the steps, then sign in."
+        );
         return;
       } else {
         if (!signIn) {
-          toast.error("Still loading — please try again in a moment.");
+          setError("Still loading -- please try again in a moment.");
           return;
         }
 
@@ -103,34 +134,58 @@ export default function AuthPage() {
           password,
         });
 
-        if (!result?.createdSessionId) {
-          toast.error(
-            "Additional verification is required. Please complete the steps and try again."
-          );
+        if (result?.status === "complete" || result?.createdSessionId) {
+          if (result?.createdSessionId) {
+            try {
+              await setActive({ session: result.createdSessionId });
+            } catch {
+              // setActive can throw if the session is already active -- safe to ignore.
+            }
+          }
+          go("/dashboard");
           return;
         }
 
-        await setActive({ session: result.createdSessionId });
-        // Hard navigation — see comment above.
-        window.location.href = "/dashboard";
+        // 2FA / additional verification required.
+        setError(
+          "Additional verification is required. Please complete the steps and try again."
+        );
         return;
       }
     } catch (err) {
-      toast.error(clerkMessage(err));
+      const msg = clerkMessage(err);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
+      // Keep the guard up briefly so the post-submit redirect isn't
+      // interrupted by the auto-redirect effect re-evaluating with a now-loaded user.
+      setTimeout(() => {
+        submittingRef.current = false;
+      }, 4000);
     }
   };
 
   const google = async () => {
-    if (!signIn) return;
+    if (!signIn || busy) return;
     setBusy(true);
-    await (signIn as any).authenticateWithRedirect({
-      strategy: "oauth_google",
-      redirectUrl: "/auth/sso-callback",
-      redirectUrlComplete: "/dashboard",
-    });
-    setBusy(false);
+    submittingRef.current = true;
+    setError("");
+    try {
+      await (signIn as any).authenticateWithRedirect({
+        strategy: "oauth_google",
+        redirectUrl: "/auth/callback",
+        redirectUrlComplete: "/dashboard",
+      });
+    } catch (err: any) {
+      const msg =
+        err?.errors?.[0]?.long_message ||
+        err?.errors?.[0]?.message ||
+        "Google sign-in failed. Please try again.";
+      setError(msg);
+      setBusy(false);
+      submittingRef.current = false;
+    }
   };
 
   return (
@@ -244,19 +299,32 @@ export default function AuthPage() {
                 required
               />
             </div>
+
+            {error && (
+              <div
+                role="alert"
+                className="rounded-sm border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400"
+              >
+                {error}
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={busy}
               className="w-full rounded-sm bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
-              {busy ? "â€¦" : mode === "signin" ? "Sign in" : "Create account"}
+              {busy ? "Loading…" : mode === "signin" ? "Sign in" : "Create account"}
             </button>
           </form>
 
           <div className="mt-6 text-center text-sm text-muted-foreground">
             {mode === "signin" ? "No account?" : "Have an account?"}{" "}
             <button
-              onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+              onClick={() => {
+                setMode(mode === "signin" ? "signup" : "signin");
+                setError("");
+              }}
               className="text-foreground underline underline-offset-4"
             >
               {mode === "signin" ? "Sign up" : "Sign in"}
@@ -267,11 +335,3 @@ export default function AuthPage() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
