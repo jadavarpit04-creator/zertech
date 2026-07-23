@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { workos } from "@/lib/workos";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,16 +21,15 @@ export async function POST(req: NextRequest) {
       lastName,
     });
 
-    // Auto-verify email so user can sign in immediately
-    await workos.userManagement.verifyEmail({ userId: user.id }).catch(() => {
-      // Non-critical — if verification fails, user can still use session cookie
-    });
+    // Hash password for our own auth (bypasses WorkOS email verification requirement)
+    const passwordHash = await bcrypt.hash(password, 12);
 
     await supabaseAdmin.from("profiles").insert({
       id: user.id,
       full_name: fullName,
       company: company ?? null,
       team_size: teamSize ?? null,
+      password_hash: passwordHash,
     });
 
     const response = NextResponse.json({ ok: true, userId: user.id });
