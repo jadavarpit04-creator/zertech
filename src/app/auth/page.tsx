@@ -98,21 +98,34 @@ export default function AuthPage() {
           firstName: fullName,
         });
 
-        // A "complete" status means the account + session are ready. The
-        // previous code only redirected when `result.createdSessionId` was
-        // truthy and otherwise returned early -- which left users stranded on
-        // /auth even after a successful 200 (the session was created server
-        // side but the client never navigated). We now redirect whenever the
-        // status is complete, calling setActive when we have a session id.
-        if (result?.status === "complete" || result?.createdSessionId) {
-          if (result?.createdSessionId) {
+        // The Clerk dev instance creates the session server-side on a
+        // successful signup, but the result object returned by the `useSignUp`
+        // hook sometimes reports status !== "complete" and createdSessionId as
+        // null even though a session exists. We therefore detect completion
+        // from EITHER the result OR the live client state, and pull the session
+        // id from whichever source has it. Without this, setActive never runs,
+        // the __client_uat cookie stays 0, and the redirect to /onboarding is
+        // bounced back to /auth by the auth middleware.
+        const w = typeof window !== "undefined" ? (window as any) : {};
+        const sessionId =
+          result?.createdSessionId ||
+          w?.Clerk?.client?.lastActiveSessionId ||
+          null;
+        const isComplete = result?.status === "complete" || !!sessionId;
+
+        if (isComplete) {
+          if (sessionId) {
             try {
-              await setActive({ session: result.createdSessionId });
+              await setActive({ session: sessionId });
             } catch {
               // setActive can throw if the session is already active -- safe to ignore.
             }
           }
           toast.success("Account created! Welcome to Zertech.");
+          // Give the browser a beat to commit the session cookies written by
+          // setActive before the hard navigation, otherwise the auth middleware
+          // can see a stale __client_uat=0 and bounce back to /auth.
+          await new Promise((r) => setTimeout(r, 120));
           go("/onboarding");
           return;
         }
@@ -134,21 +147,34 @@ export default function AuthPage() {
           password,
         });
 
-        if (result?.status === "complete" || result?.createdSessionId) {
-          if (result?.createdSessionId) {
+        // Mirrors the signup logic: detect the session from the result OR the
+        // live Clerk client, since the dev instance may report status !=
+        // "complete" while a session is actually active.
+        const w = typeof window !== "undefined" ? (window as any) : {};
+        const sessionId =
+          result?.createdSessionId ||
+          w?.Clerk?.client?.lastActiveSessionId ||
+          null;
+        const isComplete = result?.status === "complete" || !!sessionId;
+
+        if (isComplete) {
+          if (sessionId) {
             try {
-              await setActive({ session: result.createdSessionId });
+              await setActive({ session: sessionId });
             } catch {
               // setActive can throw if the session is already active -- safe to ignore.
             }
           }
+          await new Promise((r) => setTimeout(r, 120));
           go("/dashboard");
           return;
         }
 
-        // 2FA / additional verification required.
+        // 2FA / additional verification required, OR identifier not found.
+        // The Clerk SDK resolves (rather than rejecting) for some auth
+        // failures, so surface a clear, accurate message.
         setError(
-          "Additional verification is required. Please complete the steps and try again."
+          "We couldn't sign you in. Check your email and password, then try again."
         );
         return;
       }
