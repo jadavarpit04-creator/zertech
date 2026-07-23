@@ -14,9 +14,9 @@ export async function POST(req: NextRequest) {
     const firstName = nameParts[0];
     const lastName = nameParts.slice(1).join(" ");
 
+    // Create user in WorkOS without password — we handle auth ourselves via bcrypt
     const user = await workos.userManagement.createUser({
       email,
-      password,
       firstName,
       lastName,
     });
