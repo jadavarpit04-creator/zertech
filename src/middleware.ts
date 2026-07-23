@@ -1,6 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 
-const publicRoutes = ["/", "/auth", "/api/auth", "/api/chat"] as const;
+const publicRoutes = ["/", "/auth", "/api/auth", "/api/chat", "/api/automation"] as const;
 
 export default function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
