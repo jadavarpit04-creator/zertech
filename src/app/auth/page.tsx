@@ -44,14 +44,31 @@ export default function AuthPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
+
+    // Pull a human-readable message out of a Clerk error. Clerk rejects with
+    // an object carrying an `errors[]` array of detailed per-field messages
+    // (e.g. "Password has been found in an online data breach…"). The generic
+    // `err.message` does not always surface those, so we extract them here.
+    const clerkMessage = (err: unknown): string => {
+      const e = err as { errors?: Array<{ long_message?: string; message?: string }> };
+      if (e && Array.isArray(e.errors) && e.errors.length > 0) {
+        const first = e.errors[0];
+        return first?.long_message || first?.message || "Something went wrong.";
+      }
+      if (err instanceof Error && err.message) return err.message;
+      return "Something went wrong. Please try again.";
+    };
+
     try {
       if (mode === "signup") {
         if (!teamSize) {
           toast.error("Please select your team size");
-          setBusy(false);
           return;
         }
-        if (!signUp || !signIn) return;
+        if (!signUp) {
+          toast.error("Still loading — please try again in a moment.");
+          return;
+        }
 
         const result: any = await signUp.create({
           emailAddress: email,
@@ -59,22 +76,47 @@ export default function AuthPage() {
           firstName: fullName,
         });
 
-        await setActive({ session: (result as any).createdSessionId });
-        toast.success("Account created! Welcome to Zertech.");
-        router.push("/onboarding");
-      } else {
-        if (!signIn) return;
+        // Sign-up may not complete immediately (e.g. email verification may be
+        // required). Guard against a null session before calling setActive.
+        if (!result?.createdSessionId) {
+          toast.error(
+            "We couldn't finish creating your account. Please try again."
+          );
+          return;
+        }
 
-        const result = await signIn.create({
+        await setActive({ session: result.createdSessionId });
+        toast.success("Account created! Welcome to Zertech.");
+        // Hard navigation so Clerk re-initialises with the fresh session
+        // cookie. Client-side router.push races with the authenticated route
+        // guard (useUser) and can bounce the user back to /auth.
+        window.location.href = "/onboarding";
+        return;
+      } else {
+        if (!signIn) {
+          toast.error("Still loading — please try again in a moment.");
+          return;
+        }
+
+        const result: any = await signIn.create({
           identifier: email,
           password,
         });
 
-        await setActive({ session: (result as any).createdSessionId });
-        router.push("/dashboard");
+        if (!result?.createdSessionId) {
+          toast.error(
+            "Additional verification is required. Please complete the steps and try again."
+          );
+          return;
+        }
+
+        await setActive({ session: result.createdSessionId });
+        // Hard navigation — see comment above.
+        window.location.href = "/dashboard";
+        return;
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong");
+      toast.error(clerkMessage(err));
     } finally {
       setBusy(false);
     }
