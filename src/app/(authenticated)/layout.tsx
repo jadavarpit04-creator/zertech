@@ -11,19 +11,20 @@ export default function AuthenticatedLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { user: session, isLoaded: isPending } = useSession();
+  const { user, isLoaded } = useSession();
   const [initialCheck, setInitialCheck] = useState(false);
 
   useEffect(() => {
-    if (!isPending && !session) {
+    if (!isLoaded) return;
+    if (!user) {
       router.replace("/auth");
-    } else if (!isPending && session) {
+    } else {
       setInitialCheck(true);
     }
-  }, [session, isPending, router]);
+  }, [user, isLoaded, router]);
 
   if (!initialCheck) {
-    return null;
+    return <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">Loading...</div>;
   }
 
   return <AppShell>{children}</AppShell>;

@@ -230,8 +230,8 @@ function extractEmail(from: string): string {
 
 function extractAmount(text: string): number | null {
   const patterns = [
-    /(?:amount|total|sum|due)\s*[:₹$€]?\s*([\d,]+(?:\.\d{2})?)/i,
-    /[₹$€]\s*([\d,]+(?:\.\d{2})?)/,
+    /(?:amount|total|sum|due)\s*[:\u20B9$€]?\s*([\d,]+(?:\.\d{2})?)/i,
+    /[\u20B9$€]\s*([\d,]+(?:\.\d{2})?)/,
     /(\d[\d,]*\.\d{2})/,
   ];
   for (const pattern of patterns) {

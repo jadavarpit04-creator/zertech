@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { useClerk } from "@clerk/nextjs";
 import type { ReactNode } from "react";
 import {
   LayoutDashboard,
@@ -33,11 +32,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const pathname = usePathname();
 
-  const { signOut } = useClerk();
   const handleSignOut = async () => {
     await queryClient.cancelQueries();
     queryClient.clear();
-    await signOut();
+    await fetch("/api/auth/signout", { method: "POST" });
     router.replace("/auth");
   };
 

@@ -1,4 +1,4 @@
-﻿// Gmail API integration â€” direct REST calls (no googleapis dependency)
+﻿// Gmail API integration — direct REST calls (no googleapis dependency)
 // Uses GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET from environment.
 // Tokens are stored in the `integrations` Supabase table (token_data column).
 
@@ -259,7 +259,7 @@ function hasAttachment(payload: GmailMessage["payload"]): boolean {
   if (!payload) return false;
   // Direct attachment on the message itself
   if (payload.filename && payload.filename.length > 0) return true;
-  // Multipart message â€” check each part for a filename
+  // Multipart message — check each part for a filename
   if (payload.parts) {
     return payload.parts.some((p) => p.filename && p.filename.length > 0);
   }
@@ -365,7 +365,7 @@ export function detectInvoices(emails: EmailData[]): DetectedInvoice[] {
  * Scan emails for lead-related content.
  * Matches subjects containing: inquiry, quote, proposal, pricing,
  * demo, meeting, partnership, collaboration, estimate, consultation.
- * Scores 1â€“5 based on intent keywords and attachment presence.
+ * Scores 1–5 based on intent keywords and attachment presence.
  */
 export function detectLeads(emails: EmailData[]): DetectedLead[] {
   const leadKeywords = [

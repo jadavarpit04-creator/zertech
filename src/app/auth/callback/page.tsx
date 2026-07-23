@@ -1,12 +1,12 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const { isLoaded, user } = useUser();
+  const { user, isLoaded } = useSession();
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -14,9 +14,8 @@ export default function AuthCallbackPage() {
       router.replace("/auth");
       return;
     }
-    const isNewUser =
-      user.createdAt &&
-      Date.now() - new Date(user.createdAt).getTime() < 60_000;
+    const createdAt = user.createdAt ? new Date(user.createdAt).getTime() : Date.now();
+    const isNewUser = Date.now() - createdAt < 60_000;
     router.replace(isNewUser ? "/onboarding" : "/dashboard");
   }, [isLoaded, user, router]);
 

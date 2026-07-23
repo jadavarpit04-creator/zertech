@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, AuthError } from "@/lib/auth-helpers";
 import * as handlers from "@/lib/api-handlers";
 
@@ -63,3 +63,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

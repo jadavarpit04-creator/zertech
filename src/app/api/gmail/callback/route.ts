@@ -1,4 +1,5 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import {
   handleGmailCallback,
@@ -32,9 +33,8 @@ export async function GET(req: NextRequest) {
     // Exchange the auth code for tokens
     const tokens = await handleGmailCallback(code, req.nextUrl.origin);
 
-    // Identify user from Clerk session
-    const { auth } = await import("@clerk/nextjs/server");
-    const { userId } = await auth();
+    // Identify user from session
+    const userId = cookies().get("wos_session")?.value;
 
     if (!userId) {
       return NextResponse.redirect(
@@ -128,8 +128,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const { auth } = await import("@clerk/nextjs/server");
-    const { userId } = await auth();
+    const userId = cookies().get("wos_session")?.value;
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

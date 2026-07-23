@@ -1,4 +1,4 @@
-﻿import { NextRequest } from "next/server";
+﻿import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export class AuthError extends Error {
@@ -8,14 +8,15 @@ export class AuthError extends Error {
   }
 }
 
-export async function requireAuth(req?: NextRequest) {
-  try {
-    const { auth } = await import("@clerk/nextjs/server");
-    const session = await auth();
-    if (!session?.userId) throw new AuthError("No session");
-    return { supabase: supabaseAdmin, user: { id: session.userId } };
-  } catch (err) {
-    if (err instanceof AuthError) throw err;
-    throw new AuthError("Unauthorized");
-  }
+export async function requireAuth() {
+  const cookieStore = cookies();
+  const userId = cookieStore.get("wos_session")?.value;
+  if (!userId) throw new AuthError("Unauthorized");
+  return { supabase: supabaseAdmin, user: { id: userId } };
+}
+
+export async function getCurrentUser() {
+  const cookieStore = cookies();
+  const userId = cookieStore.get("wos_session")?.value;
+  return userId ?? null;
 }

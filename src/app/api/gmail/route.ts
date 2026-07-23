@@ -32,9 +32,9 @@ export async function GET(req: NextRequest) {
 
 // â”€â”€â”€ POST /api/gmail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Action-based dispatcher:
-//   action: "callback" â€” exchange auth code for tokens
-//   action: "sync"     â€” sync last 30 days of emails + detect
-//   action: "detect"   â€” re-run detection on stored emails
+//   action: "callback" — exchange auth code for tokens
+//   action: "sync"     — sync last 30 days of emails + detect
+//   action: "detect"   — re-run detection on stored emails
 
 export async function POST(req: NextRequest) {
   try {

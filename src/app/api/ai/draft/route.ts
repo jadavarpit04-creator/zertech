@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
     const { kind, tone: explicitTone, data } = parsed.data;
 
-    // Determine tone â€” if not explicitly provided, use escalation logic (invoice only)
+    // Determine tone — if not explicitly provided, use escalation logic (invoice only)
     let tone: Tone;
     if (explicitTone) {
       tone = explicitTone;

@@ -1,4 +1,5 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { requireAuth, AuthError } from "@/lib/auth-helpers";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import * as sheets from "@/lib/sheets-service";
@@ -15,9 +16,7 @@ export async function GET(req: NextRequest) {
 
     // --- OAuth callback from Google redirect ---
     if (code) {
-      const { auth } = await import("@clerk/nextjs/server");
-      const { userId } = await auth();
-
+      const userId = cookies().get("wos_session")?.value;
       if (!userId) {
         return NextResponse.redirect(new URL("/auth", req.url));
       }
@@ -181,7 +180,7 @@ export async function POST(req: NextRequest) {
             hour12: false,
           }),
           client,
-          invoiceNumber: draft.source_id?.slice(0, 8) ?? "â€”",
+          invoiceNumber: draft.source_id?.slice(0, 8) ?? "—",
           amount: `â‚¹${amount.toFixed(2)}`,
           status: draft.status,
         }

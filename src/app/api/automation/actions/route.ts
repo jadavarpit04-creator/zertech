@@ -15,6 +15,7 @@
  *   - run_scan: Trigger invoice overdue scan
  *   - list_pending: List pending drafts
  */
+import { cookies } from "next/headers";
 import { requireAuth } from "@/lib/auth-helpers";
 import * as handlers from "@/lib/api-handlers";
 import { supabaseAdmin } from "@/lib/supabase-admin";
@@ -30,10 +31,9 @@ export async function POST(req: NextRequest) {
 
     // Authenticate via session or fallback to system
     let userId = "";
-    const { auth } = await import("@clerk/nextjs/server");
-    const session = await auth();
-    if (session.userId) {
-      userId = session.userId;
+    const session = cookies().get("wos_session")?.value;
+    if (session) {
+      userId = session;
     } else {
       userId = "system";
     }

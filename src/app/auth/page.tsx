@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { useSignIn, useSignUp, useUser, useClerk } from "@clerk/nextjs";
 
 const TEAM_SIZES: Array<{ value: string; label: string; sub: string }> = [
   { value: "1 (Solo)", label: "1", sub: "Solo" },
@@ -18,11 +17,7 @@ const TEAM_SIZES: Array<{ value: string; label: string; sub: string }> = [
 
 export default function AuthPage() {
   const router = useRouter();
-  const { signIn } = useSignIn();
-  const { setActive } = useClerk();
-  const { signUp } = useSignUp();
-  const { user, isLoaded: userLoaded } = useUser();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -36,10 +31,19 @@ export default function AuthPage() {
   }, []);
 
   useEffect(() => {
-    if (userLoaded && user) {
-      router.push("/dashboard");
-    }
-  }, [user, userLoaded, router]);
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.user) {
+          window.location.replace("/dashboard");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const redirect = (path: string) => {
+    setTimeout(() => { window.location.replace(path); }, 100);
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,27 +55,33 @@ export default function AuthPage() {
           setBusy(false);
           return;
         }
-        if (!signUp || !signIn) return;
 
-        const result: any = await signUp.create({
-          emailAddress: email,
-          password,
-          firstName: fullName,
+        const res = await fetch("/api/auth/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, fullName, company, teamSize }),
         });
 
-        await setActive({ session: (result as any).createdSessionId });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "Sign up failed" }));
+          throw new Error(err.error);
+        }
+
         toast.success("Account created! Welcome to Zertech.");
-        router.push("/onboarding");
+        redirect("/onboarding");
       } else {
-        if (!signIn) return;
-
-        const result = await signIn.create({
-          identifier: email,
-          password,
+        const res = await fetch("/api/auth/signin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
         });
 
-        await setActive({ session: (result as any).createdSessionId });
-        router.push("/dashboard");
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "Invalid email or password" }));
+          throw new Error(err.error);
+        }
+
+        redirect("/dashboard");
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
@@ -80,26 +90,15 @@ export default function AuthPage() {
     }
   };
 
-  const google = async () => {
-    if (!signIn) return;
-    setBusy(true);
-    await (signIn as any).authenticateWithRedirect({
-      strategy: "oauth_google",
-      redirectUrl: "/auth/sso-callback",
-      redirectUrlComplete: "/dashboard",
-    });
-    setBusy(false);
-  };
-
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
+    <div className="flex min-h-screen items-center justify-center bg-background px-6 py-4">
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
         className="w-full max-w-md"
       >
-        <Link href="/" className="mb-8 flex items-center justify-center gap-2">
+        <Link href="/" className="mb-2 flex items-center justify-center gap-2">
           <img src="/logo.png" alt="Logo" className="h-24 w-auto" />
         </Link>
         <div className="rounded-sm border border-border bg-card p-8">
@@ -110,21 +109,8 @@ export default function AuthPage() {
             {mode === "signin" ? "Sign in" : "Get started"}
           </h1>
 
-          <button
-            onClick={google}
-            disabled={busy}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-sm border border-border bg-background px-4 py-2.5 text-sm font-medium hover:bg-muted disabled:opacity-50"
-          >
-            Continue with Google
-          </button>
 
-          <div className="my-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-border" />
-            <span className="mono-caps text-muted-foreground">or</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-
-          <form onSubmit={onSubmit} className="space-y-4">
+          <form onSubmit={onSubmit} className="mt-8 space-y-4">
             {mode === "signup" && (
               <div>
                 <label className="mono-caps mb-2 block text-muted-foreground">Full name</label>
@@ -207,7 +193,7 @@ export default function AuthPage() {
               disabled={busy}
               className="w-full rounded-sm bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
-              {busy ? "â€¦" : mode === "signin" ? "Sign in" : "Create account"}
+              {busy ? "\u2026" : mode === "signin" ? "Sign in" : "Create account"}
             </button>
           </form>
 
@@ -225,11 +211,4 @@ export default function AuthPage() {
     </div>
   );
 }
-
-
-
-
-
-
-
 

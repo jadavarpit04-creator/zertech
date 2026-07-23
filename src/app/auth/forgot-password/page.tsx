@@ -4,25 +4,27 @@ import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { useSignIn } from "@clerk/nextjs";
 
 export default function ForgotPasswordPage() {
-  const { signIn } = useSignIn();
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!signIn) return;
     setBusy(true);
     try {
-      await signIn.create({
-        strategy: "reset_password_email_code" as any,
-        identifier: email,
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
-      toast.success("Check your email for the reset code");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Something went wrong" }));
+        throw new Error(err.error);
+      }
+      toast.success("Check your email for the reset link");
     } catch (err: any) {
-      toast.error(err.errors?.[0]?.message ?? "Something went wrong");
+      toast.error(err.message ?? "Something went wrong");
     } finally {
       setBusy(false);
     }
@@ -59,7 +61,7 @@ export default function ForgotPasswordPage() {
               disabled={busy}
               className="w-full rounded-sm bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
-              {busy ? "â€¦" : "Send reset link"}
+              {busy ? "…" : "Send reset link"}
             </button>
           </form>
 
