@@ -41,7 +41,6 @@ export async function POST(req: NextRequest) {
           id: user.id,
           full_name: fullName,
           company: company ?? null,
-          team_size: teamSize ?? null,
           password_hash: passwordHash,
         }),
       }
