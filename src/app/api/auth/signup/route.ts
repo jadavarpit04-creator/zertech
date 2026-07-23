@@ -24,13 +24,18 @@ export async function POST(req: NextRequest) {
     // Hash password for our own auth (bypasses WorkOS email verification requirement)
     const passwordHash = await bcrypt.hash(password, 12);
 
-    await supabaseAdmin.from("profiles").insert({
+    const { error: insertError } = await supabaseAdmin.from("profiles").insert({
       id: user.id,
       full_name: fullName,
       company: company ?? null,
       team_size: teamSize ?? null,
       password_hash: passwordHash,
     });
+
+    if (insertError) {
+      console.error("[auth/signup] profile insert error:", insertError);
+      // Don't fail the signup — profile can be created later
+    }
 
     const response = NextResponse.json({ ok: true, userId: user.id });
     response.cookies.set("wos_session", user.id, {
