@@ -20,6 +20,11 @@ export async function POST(req: NextRequest) {
       lastName,
     });
 
+    // Auto-verify email so user can sign in immediately
+    await workos.userManagement.verifyEmail({ userId: user.id }).catch(() => {
+      // Non-critical — if verification fails, user can still use session cookie
+    });
+
     await supabaseAdmin.from("profiles").insert({
       id: user.id,
       full_name: fullName,
