@@ -1,0 +1,5 @@
+- generic [active] [ref=f31e1]:
+  - generic [ref=f31e2]: Loading...
+  - region "Notifications alt+T"
+  - button "Open AI assistant" [ref=f31e3] [cursor=pointer]
+  - alert [ref=f31e6]

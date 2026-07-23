@@ -1,0 +1,51 @@
+- generic [active] [ref=f15e1]:
+  - generic [ref=f15e3]:
+    - link [ref=f15e4] [cursor=pointer]:
+      - /url: /
+      - img "Logo" [ref=f15e5]
+    - generic [ref=f15e6]:
+      - generic [ref=f15e7]: Create account
+      - heading "Get started" [level=1] [ref=f15e8]
+      - button "Continue with Google" [ref=f15e9] [cursor=pointer]
+      - generic [ref=f15e10]: or
+      - generic [ref=f15e14]:
+        - generic [ref=f15e15]:
+          - generic [ref=f15e16]: Full name
+          - textbox [ref=f15e17]
+        - generic [ref=f15e18]:
+          - generic [ref=f15e19]: Company name
+          - textbox [ref=f15e20]
+        - generic [ref=f15e21]:
+          - generic [ref=f15e22]: Team size
+          - generic [ref=f15e23]:
+            - button "1 Solo" [ref=f15e24] [cursor=pointer]:
+              - generic [ref=f15e25]: "1"
+              - generic [ref=f15e26]: Solo
+            - button "2-5 Small" [ref=f15e27] [cursor=pointer]:
+              - generic [ref=f15e28]: 2-5
+              - generic [ref=f15e29]: Small
+            - button "6-10 Growing" [ref=f15e30] [cursor=pointer]:
+              - generic [ref=f15e31]: 6-10
+              - generic [ref=f15e32]: Growing
+            - button "11-25 Team" [ref=f15e33] [cursor=pointer]:
+              - generic [ref=f15e34]: 11-25
+              - generic [ref=f15e35]: Team
+            - button "26-50 Scale" [ref=f15e36] [cursor=pointer]:
+              - generic [ref=f15e37]: 26-50
+              - generic [ref=f15e38]: Scale
+            - button "50+ Enterprise" [ref=f15e39] [cursor=pointer]:
+              - generic [ref=f15e40]: 50+
+              - generic [ref=f15e41]: Enterprise
+        - generic [ref=f15e42]:
+          - generic [ref=f15e43]: Email
+          - textbox [ref=f15e44]
+        - generic [ref=f15e45]:
+          - generic [ref=f15e46]: Password
+          - textbox [ref=f15e47]
+        - button "Create account" [ref=f15e48] [cursor=pointer]
+      - generic [ref=f15e49]:
+        - text: Have an account?
+        - button "Sign in" [ref=f15e50] [cursor=pointer]
+  - region "Notifications alt+T"
+  - button "Open AI assistant" [ref=f15e51] [cursor=pointer]
+  - alert [ref=f15e54]

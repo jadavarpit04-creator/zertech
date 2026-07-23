@@ -1,0 +1,51 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - link [ref=e4] [cursor=pointer]:
+      - /url: /
+      - img "Logo" [ref=e5]
+    - generic [ref=e6]:
+      - generic [ref=e7]: Create account
+      - heading "Get started" [level=1] [ref=e8]
+      - button "Continue with Google" [ref=e9] [cursor=pointer]
+      - generic [ref=e10]: or
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e16]: Full name
+          - textbox [ref=e17]
+        - generic [ref=e18]:
+          - generic [ref=e19]: Company name
+          - textbox [ref=e20]
+        - generic [ref=e21]:
+          - generic [ref=e22]: Team size
+          - generic [ref=e23]:
+            - button "1 Solo" [ref=e24] [cursor=pointer]:
+              - generic [ref=e25]: "1"
+              - generic [ref=e26]: Solo
+            - button "2-5 Small" [ref=e27] [cursor=pointer]:
+              - generic [ref=e28]: 2-5
+              - generic [ref=e29]: Small
+            - button "6-10 Growing" [ref=e30] [cursor=pointer]:
+              - generic [ref=e31]: 6-10
+              - generic [ref=e32]: Growing
+            - button "11-25 Team" [ref=e33] [cursor=pointer]:
+              - generic [ref=e34]: 11-25
+              - generic [ref=e35]: Team
+            - button "26-50 Scale" [ref=e36] [cursor=pointer]:
+              - generic [ref=e37]: 26-50
+              - generic [ref=e38]: Scale
+            - button "50+ Enterprise" [ref=e39] [cursor=pointer]:
+              - generic [ref=e40]: 50+
+              - generic [ref=e41]: Enterprise
+        - generic [ref=e42]:
+          - generic [ref=e43]: Email
+          - textbox [ref=e44]
+        - generic [ref=e45]:
+          - generic [ref=e46]: Password
+          - textbox [ref=e47]
+        - button "Create account" [ref=e48] [cursor=pointer]
+      - generic [ref=e49]:
+        - text: Have an account?
+        - button "Sign in" [ref=e50] [cursor=pointer]
+  - region "Notifications alt+T"
+  - button "Open AI assistant" [ref=e51] [cursor=pointer]
+  - alert [ref=e54]

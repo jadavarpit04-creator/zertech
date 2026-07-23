@@ -26,8 +26,6 @@ export default function AuthPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  // Guards the "already logged in -> /dashboard" effect so it doesn't race with
-  // an in-flight form submission (which performs its own explicit redirect).
   const submittingRef = useRef(false);
 
   useEffect(() => {
@@ -36,7 +34,7 @@ export default function AuthPage() {
   }, []);
 
   useEffect(() => {
-<<<<<<< HEAD
+    if (submittingRef.current) return;
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then((data) => {
@@ -47,21 +45,14 @@ export default function AuthPage() {
       .catch(() => {});
   }, []);
 
-  const redirect = (path: string) => {
-    setTimeout(() => { window.location.replace(path); }, 100);
+  const go = (path: string) => {
+    window.location.href = path;
   };
-=======
-    // Only auto-redirect already-authenticated visitors who land on /auth
-    // without an active submission in progress. Without this guard, a
-    // successful signUp/signIn (which sets the session asynchronously) would
-    // trigger this effect and client-navigate to /dashboard, racing -- and
-    // sometimes cancelling -- the explicit window.location.href redirect below.
-    if (submittingRef.current) return;
-    if (userLoaded && user) {
-      router.push("/dashboard");
-    }
-  }, [user, userLoaded, router]);
->>>>>>> 54373dfb291dd12fcbb4ab0960d0eee5a170b18d
+
+  const extractMessage = (err: unknown): string => {
+    if (err instanceof Error && err.message) return err.message;
+    return "Something went wrong. Please try again.";
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,45 +61,12 @@ export default function AuthPage() {
     submittingRef.current = true;
     setError("");
 
-    // Pull a human-readable message out of a Clerk error. Clerk rejects with
-    // an object carrying an `errors[]` array of detailed per-field messages
-    // (e.g. "Password has been found in an online data breach..."). The generic
-    // `err.message` does not always surface those, so we extract them here.
-    const clerkMessage = (err: unknown): string => {
-      const e = err as {
-        errors?: Array<{ long_message?: string; longMessage?: string; message?: string }>;
-      };
-      if (e && Array.isArray(e.errors) && e.errors.length > 0) {
-        const first = e.errors[0];
-        // Clerk SDK errors use either snake_case (long_message) or camelCase
-        // (longMessage) depending on the code path -- handle both.
-        return (
-          first?.long_message ||
-          first?.longMessage ||
-          first?.message ||
-          "Something went wrong."
-        );
-      }
-      if (err instanceof Error && err.message) return err.message;
-      return "Something went wrong. Please try again.";
-    };
-
-    // Centralised hard navigation. Using window.location.href (not the Next
-    // router) so the browser does a full reload and Clerk re-initialises with
-    // the fresh session cookie -- client-side router.push races with the
-    // authenticated route guard and can bounce the user back to /auth.
-    const go = (path: string) => {
-      window.location.href = path;
-    };
-
     try {
       if (mode === "signup") {
         if (!teamSize) {
           setError("Please select your team size");
-          return;
-        }
-        if (!signUp) {
-          setError("Still loading -- please try again in a moment.");
+          setBusy(false);
+          submittingRef.current = false;
           return;
         }
 
@@ -118,14 +76,13 @@ export default function AuthPage() {
           body: JSON.stringify({ email, password, fullName, company, teamSize }),
         });
 
-<<<<<<< HEAD
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: "Sign up failed" }));
           throw new Error(err.error);
         }
 
         toast.success("Account created! Welcome to Zertech.");
-        redirect("/onboarding");
+        go("/onboarding");
       } else {
         const res = await fetch("/api/auth/signin", {
           method: "POST",
@@ -138,133 +95,20 @@ export default function AuthPage() {
           throw new Error(err.error);
         }
 
-        redirect("/dashboard");
-=======
-        // The Clerk dev instance creates the session server-side on a
-        // successful signup, but the result object returned by the `useSignUp`
-        // hook sometimes reports status !== "complete" and createdSessionId as
-        // null even though a session exists. We therefore detect completion
-        // from EITHER the result OR the live client state, and pull the session
-        // id from whichever source has it. Without this, setActive never runs,
-        // the __client_uat cookie stays 0, and the redirect to /onboarding is
-        // bounced back to /auth by the auth middleware.
-        const w = typeof window !== "undefined" ? (window as any) : {};
-        const sessionId =
-          result?.createdSessionId ||
-          w?.Clerk?.client?.lastActiveSessionId ||
-          null;
-        const isComplete = result?.status === "complete" || !!sessionId;
-
-        if (isComplete) {
-          if (sessionId) {
-            try {
-              await setActive({ session: sessionId });
-            } catch {
-              // setActive can throw if the session is already active -- safe to ignore.
-            }
-          }
-          toast.success("Account created! Welcome to Zertech.");
-          // Give the browser a beat to commit the session cookies written by
-          // setActive before the hard navigation, otherwise the auth middleware
-          // can see a stale __client_uat=0 and bounce back to /auth.
-          await new Promise((r) => setTimeout(r, 120));
-          go("/onboarding");
-          return;
-        }
-
-        // status is "missing_requirements" -- most commonly a weak/breached
-        // password (Clerk rejects those with a 422) or a missing required field.
-        // The useSignUp hook resolves (rather than rejecting) for these, so the
-        // specific Clerk message isn't always available here; give an accurate,
-        // actionable hint instead.
-        setError(
-          "We couldn't create your account. Please use a stronger password " +
-            "(at least 8 characters with a mix of letters, numbers, and symbols) " +
-            "and try again."
-        );
-        return;
-      } else {
-        if (!signIn) {
-          setError("Still loading -- please try again in a moment.");
-          return;
-        }
-
-        const result: any = await signIn.create({
-          identifier: email,
-          password,
-        });
-
-        // Mirrors the signup logic: detect the session from the result OR the
-        // live Clerk client, since the dev instance may report status !=
-        // "complete" while a session is actually active.
-        const w = typeof window !== "undefined" ? (window as any) : {};
-        const sessionId =
-          result?.createdSessionId ||
-          w?.Clerk?.client?.lastActiveSessionId ||
-          null;
-        const isComplete = result?.status === "complete" || !!sessionId;
-
-        if (isComplete) {
-          if (sessionId) {
-            try {
-              await setActive({ session: sessionId });
-            } catch {
-              // setActive can throw if the session is already active -- safe to ignore.
-            }
-          }
-          await new Promise((r) => setTimeout(r, 120));
-          go("/dashboard");
-          return;
-        }
-
-        // 2FA / additional verification required, OR identifier not found.
-        // The Clerk SDK resolves (rather than rejecting) for some auth
-        // failures, so surface a clear, accurate message.
-        setError(
-          "We couldn't sign you in. Check your email and password, then try again."
-        );
-        return;
->>>>>>> 54373dfb291dd12fcbb4ab0960d0eee5a170b18d
+        go("/dashboard");
       }
     } catch (err) {
-      const msg = clerkMessage(err);
+      const msg = extractMessage(err);
       setError(msg);
       toast.error(msg);
     } finally {
       setBusy(false);
-      // Keep the guard up briefly so the post-submit redirect isn't
-      // interrupted by the auto-redirect effect re-evaluating with a now-loaded user.
       setTimeout(() => {
         submittingRef.current = false;
       }, 4000);
     }
   };
 
-<<<<<<< HEAD
-=======
-  const google = async () => {
-    if (!signIn || busy) return;
-    setBusy(true);
-    submittingRef.current = true;
-    setError("");
-    try {
-      await (signIn as any).authenticateWithRedirect({
-        strategy: "oauth_google",
-        redirectUrl: "/auth/callback",
-        redirectUrlComplete: "/dashboard",
-      });
-    } catch (err: any) {
-      const msg =
-        err?.errors?.[0]?.long_message ||
-        err?.errors?.[0]?.message ||
-        "Google sign-in failed. Please try again.";
-      setError(msg);
-      setBusy(false);
-      submittingRef.current = false;
-    }
-  };
-
->>>>>>> 54373dfb291dd12fcbb4ab0960d0eee5a170b18d
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-6 py-4">
       <motion.div
@@ -378,11 +222,7 @@ export default function AuthPage() {
               disabled={busy}
               className="w-full rounded-sm bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
-<<<<<<< HEAD
-              {busy ? "\u2026" : mode === "signin" ? "Sign in" : "Create account"}
-=======
-              {busy ? "Loading…" : mode === "signin" ? "Sign in" : "Create account"}
->>>>>>> 54373dfb291dd12fcbb4ab0960d0eee5a170b18d
+              {busy ? "Loading\u2026" : mode === "signin" ? "Sign in" : "Create account"}
             </button>
           </form>
 
@@ -403,7 +243,3 @@ export default function AuthPage() {
     </div>
   );
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> 54373dfb291dd12fcbb4ab0960d0eee5a170b18d

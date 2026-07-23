@@ -1,0 +1,21 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - link [ref=e4] [cursor=pointer]:
+      - /url: /
+      - img "Logo" [ref=e5]
+    - generic [ref=e6]:
+      - generic [ref=e7]: Welcome back
+      - heading "Sign in" [level=1] [ref=e8]
+      - generic [ref=e9]:
+        - generic [ref=e10]:
+          - generic [ref=e11]: Email
+          - textbox [ref=e12]
+        - generic [ref=e13]:
+          - generic [ref=e14]: Password
+          - textbox [ref=e15]
+        - button "Sign in" [ref=e16] [cursor=pointer]
+      - generic [ref=e17]:
+        - text: No account?
+        - button "Sign up" [ref=e18] [cursor=pointer]
+  - region "Notifications alt+T"
+  - button "Open AI assistant" [ref=e19] [cursor=pointer]

@@ -1,0 +1,24 @@
+- generic [active] [ref=f20e1]:
+  - generic [ref=f20e3]:
+    - link [ref=f20e4] [cursor=pointer]:
+      - /url: /
+      - img "Logo" [ref=f20e5]
+    - generic [ref=f20e6]:
+      - generic [ref=f20e7]: Welcome back
+      - heading "Sign in" [level=1] [ref=f20e8]
+      - button "Continue with Google" [ref=f20e9] [cursor=pointer]
+      - generic [ref=f20e10]: or
+      - generic [ref=f20e14]:
+        - generic [ref=f20e15]:
+          - generic [ref=f20e16]: Email
+          - textbox [ref=f20e17]
+        - generic [ref=f20e18]:
+          - generic [ref=f20e19]: Password
+          - textbox [ref=f20e20]
+        - button "Sign in" [ref=f20e21] [cursor=pointer]
+      - generic [ref=f20e22]:
+        - text: No account?
+        - button "Sign up" [ref=f20e23] [cursor=pointer]
+  - region "Notifications alt+T"
+  - button "Open AI assistant" [ref=f20e24] [cursor=pointer]
+  - alert [ref=f20e27]
