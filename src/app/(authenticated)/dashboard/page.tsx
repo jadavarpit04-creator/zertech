@@ -50,7 +50,7 @@ export default function DashboardPage() {
         }
       />
       <div className="space-y-6 p-6 md:p-10">
-        <div className="grid gap-px overflow-hidden rounded-sm border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-px overflow-hidden rounded-sm border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
           {stats.map((s, i) => (
             <motion.div
               key={s.label}
@@ -67,11 +67,6 @@ export default function DashboardPage() {
               </Link>
             </motion.div>
           ))}
-          {/* Fill empty cells so grid doesn't show blank box */}
-          {stats.length % 4 !== 0 &&
-            Array.from({ length: 4 - (stats.length % 4) }).map((_, i) => (
-              <div key={`empty-${i}`} className="bg-card" />
-            ))}
         </div>
 
         <section>
