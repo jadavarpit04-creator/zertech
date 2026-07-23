@@ -28,13 +28,14 @@ export async function POST(req: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
     const upsertRes = await fetch(
-      `${supabaseUrl}/rest/v1/profiles?id=eq.${user.id}`,
+      `${supabaseUrl}/rest/v1/profiles`,
       {
-        method: "PUT",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           apikey: serviceKey,
           Authorization: `Bearer ${serviceKey}`,
+          Prefer: "resolution=merge-duplicates",
         },
         body: JSON.stringify({
           id: user.id,
