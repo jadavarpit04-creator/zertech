@@ -1,20 +1,28 @@
-"use client";
+﻿"use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { listLeads, importLeads } from "@/lib/api-client";
+import { listLeads, importLeads, updateLeadStatus } from "@/lib/api-client";
 import { PageHeader, EmptyState } from "@/components/app-shell";
 import ExportButton from "./export-button";
 
 export default function LeadsPage() {
-  const { data, isLoading } = useQuery({
+  const queryClient = useQueryClient();
+  const { data } = useQuery({
     queryKey: ["leads"],
     queryFn: () => listLeads(),
   });
   const [open, setOpen] = useState(false);
 
-  if (isLoading) return <div className="p-8 text-sm text-muted-foreground">Loading leads…</div>;
+  const statusMut = useMutation({
+    mutationFn: (body: { id: string; status: "new" | "contacted" | "qualified" | "lost" }) =>
+      updateLeadStatus(body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   return (
     <>
@@ -69,9 +77,10 @@ export default function LeadsPage() {
                     <td className="px-4 py-3 text-muted-foreground">{l.source ?? "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{l.notes ?? "—"}</td>
                     <td className="px-4 py-3">
-                      <span className="mono-caps rounded-sm bg-muted px-2 py-1 text-muted-foreground">
-                        {l.status}
-                      </span>
+                      <StatusDropdown
+                        value={l.status}
+                        onChange={(status) => statusMut.mutate({ id: l.id, status })}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -97,6 +106,31 @@ function ScoreBadge({ score }: { score: number }) {
       <span className="font-bold">{score}</span>
       <span>/5</span>
     </span>
+  );
+}
+
+const statusColor: Record<string, string> = {
+  contacted: "bg-green-500",
+  qualified: "bg-green-500",
+  new: "bg-gray-400",
+  lost: "bg-red-500",
+};
+
+function StatusDropdown({ value, onChange }: { value: string; onChange: (s: "new" | "contacted" | "qualified" | "lost") => void }) {
+  return (
+    <div className="inline-flex items-center gap-2 rounded-sm bg-muted px-2 py-1">
+      <span className={`h-2 w-2 rounded-full ${statusColor[value] ?? "bg-gray-400"}`} />
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value as any)}
+        className="mono-caps appearance-none bg-transparent text-muted-foreground outline-none"
+      >
+        <option value="new">new</option>
+        <option value="contacted">contacted</option>
+        <option value="qualified">qualified</option>
+        <option value="lost">lost</option>
+      </select>
+    </div>
   );
 }
 

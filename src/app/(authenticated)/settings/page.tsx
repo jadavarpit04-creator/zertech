@@ -1,22 +1,44 @@
 ﻿"use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { listSettings, updateWorkflow, toggleIntegration, getGmailOAuthUrl, getSheetsOAuthUrl, saveIntegrationMeta, listTemplates, saveTemplate, getProfile, setPlan } from "@/lib/api-client";
 import { PageHeader } from "@/components/app-shell";
 
 export default function SettingsPage() {
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ["settings"],
     queryFn: () => listSettings(),
   });
   const queryClient = useQueryClient();
 
+  // Local optimistic state for workflow toggles
+  const [localWorkflows, setLocalWorkflows] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (data?.workflows) {
+      const map: Record<string, boolean> = {};
+      for (const w of data.workflows) map[w.workflow] = w.auto_send;
+      setLocalWorkflows((prev) => {
+        // Only sync workflows not yet touched by user
+        const merged = { ...map };
+        for (const key of Object.keys(prev)) merged[key] = prev[key];
+        return merged;
+      });
+    }
+  }, [data?.workflows]);
+
   const wfMut = useMutation({
     mutationFn: (v: { workflow: "invoice" | "lead"; auto_send: boolean }) => updateWorkflow(v),
+    onMutate: async (v) => {
+      setLocalWorkflows((prev) => ({ ...prev, [v.workflow]: v.auto_send }));
+    },
     onSuccess: () => { toast.success("Updated"); queryClient.invalidateQueries({ queryKey: ["settings"] }); },
-    onError: (e) => toast.error(e.message),
+    onError: (e, v) => {
+      toast.error(e.message);
+      setLocalWorkflows((prev) => ({ ...prev, [v.workflow]: !v.auto_send }));
+    },
   });
   const intMut = useMutation({
     mutationFn: (v: { provider: "gmail" | "sheets" | "outlook" | "slack"; connected: boolean }) => toggleIntegration(v),
@@ -24,9 +46,7 @@ export default function SettingsPage() {
     onError: (e) => toast.error(e.message),
   });
 
-  if (isLoading) return <div className="p-8 text-sm text-muted-foreground">Loading settingsâ€¦</div>;
 
-  const wfMap = Object.fromEntries((data?.workflows ?? []).map((w: any) => [w.workflow, w]));
   const intMap = Object.fromEntries((data?.integrations ?? []).map((i: any) => [i.provider, i]));
   const providers: Array<{ id: "gmail" | "sheets" | "outlook" | "slack"; label: string; desc: string }> = [
     { id: "gmail", label: "Gmail", desc: "Send follow-ups from your Gmail inbox." },
@@ -40,11 +60,10 @@ export default function SettingsPage() {
       <PageHeader eyebrow="Config" title="Settings" />
       <div className="space-y-10 p-6 md:p-10">
         <section>
-          <h2 className="mono-caps text-muted-foreground">Workflow â€” approval mode</h2>
+          <h2 className="mono-caps text-muted-foreground">Workflow — approval mode</h2>
           <div className="mt-4 divide-y divide-border overflow-hidden rounded-sm border border-border bg-card">
             {(["invoice", "lead"] as const).map((w) => {
-              const s = wfMap[w];
-              const autoSend = s?.auto_send ?? false;
+              const autoSend = localWorkflows[w] ?? false;
               return (
                 <div key={w} className="flex items-center justify-between px-6 py-4">
                   <div>
@@ -76,6 +95,23 @@ export default function SettingsPage() {
                   <div>
                     <div className="font-mono text-sm font-semibold">{p.label}</div>
                     <div className="mt-1 text-xs text-muted-foreground">{p.desc}</div>
+                    {connected && (() => {
+                      const meta = intMap[p.id]?.meta as Record<string, any> | undefined;
+                      const email = meta?.email_address;
+                      const lastSynced = meta?.last_synced;
+                      const parts: string[] = [];
+                      if (email) parts.push(`Connected as: ${email}`);
+                      if (lastSynced) {
+                        const diff = Date.now() - new Date(lastSynced).getTime();
+                        const mins = Math.floor(diff / 60000);
+                        const hrs = Math.floor(diff / 3600000);
+                        const label = mins < 1 ? "just now" : mins < 60 ? `${mins} min ago` : hrs < 24 ? `${hrs}h ago` : `${Math.floor(hrs / 24)}d ago`;
+                        parts.push(`Last synced: ${label}`);
+                      }
+                      return parts.length > 0 ? (
+                        <div className="mt-1.5 text-xs text-muted-foreground/70">{parts.join(" • ")}</div>
+                      ) : null;
+                    })()}
                   </div>
                   <button
                     onClick={async () => {
@@ -112,7 +148,7 @@ export default function SettingsPage() {
             })}
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            Gmail and Google Sheets use OAuth â€” connect once and drafts send/sync automatically.
+            Gmail and Google Sheets use OAuth — connect once and drafts send/sync automatically.
           </p>
         </section>
 
@@ -121,24 +157,29 @@ export default function SettingsPage() {
           <TemplatesPanel />
         </section>
 
-        <section>
-          <h2 className="mono-caps text-muted-foreground">Notifications</h2>
-          <div className="mt-4 space-y-4 rounded-sm border border-border bg-card p-6">
-            <p className="text-xs text-muted-foreground">
-              Get alerted on Slack or Telegram when new drafts are ready for review.
-            </p>
-            <SlackTelegramForm
-              slackConnected={(intMap["slack"]?.meta as any)?.webhook_url != null}
-              telegramConnected={
-                (intMap["slack"]?.meta as any)?.telegram_bot_token != null &&
-                (intMap["slack"]?.meta as any)?.telegram_chat_id != null
-              }
-            />
-          </div>
-        </section>
-      </div>
-    </>
-  );
+      <section>
+        <h2 className="mono-caps text-muted-foreground">Notifications</h2>
+        <div className="mt-4 space-y-4 rounded-sm border border-border bg-card p-6">
+          <p className="text-xs text-muted-foreground">
+            Get alerted on Slack or Telegram when new drafts are ready for review.
+          </p>
+          <SlackTelegramForm
+            slackConnected={(intMap["slack"]?.meta as any)?.webhook_url != null}
+            telegramConnected={
+              (intMap["slack"]?.meta as any)?.telegram_bot_token != null &&
+              (intMap["slack"]?.meta as any)?.telegram_chat_id != null
+            }
+          />
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mono-caps text-muted-foreground">Billing</h2>
+        <BillingPanel />
+      </section>
+    </div>
+  </>
+);
 }
 
 function SlackTelegramForm({
@@ -166,7 +207,7 @@ function SlackTelegramForm({
     <div className="grid gap-6 md:grid-cols-2">
       <div className="space-y-3">
         <div className="font-mono text-sm font-semibold">
-          Slack {slackConnected && <span className="text-green-500">â€¢ connected</span>}
+          Slack {slackConnected && <span className="text-green-500">• connected</span>}
         </div>
         <input
           placeholder="https://hooks.slack.com/services/..."
@@ -177,7 +218,7 @@ function SlackTelegramForm({
       </div>
       <div className="space-y-3">
         <div className="font-mono text-sm font-semibold">
-          Telegram {telegramConnected && <span className="text-green-500">â€¢ connected</span>}
+          Telegram {telegramConnected && <span className="text-green-500">• connected</span>}
         </div>
         <input
           placeholder="Bot token (123:ABC...)"
@@ -203,7 +244,7 @@ function SlackTelegramForm({
           }
           className="rounded-sm bg-foreground px-4 py-1.5 text-sm font-medium text-background transition hover:opacity-90"
         >
-          {saveMut.isPending ? "Savingâ€¦" : "Save notifications"}
+          {saveMut.isPending ? "Saving…" : "Save notifications"}
         </button>
       </div>
     </div>
@@ -211,7 +252,7 @@ function SlackTelegramForm({
 }
 
 function TemplatesPanel() {
-  const { data, isLoading } = useQuery({ queryKey: ["templates"], queryFn: () => listTemplates() });
+  const { data } = useQuery({ queryKey: ["templates"], queryFn: () => listTemplates() });
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<null | { id?: string; kind: "invoice" | "lead"; name: string; subject: string; body: string }>(null);
 
@@ -221,7 +262,6 @@ function TemplatesPanel() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  if (isLoading) return <div className="mt-4 text-sm text-muted-foreground">Loading templatesâ€¦</div>;
 
   return (
     <div className="mt-4 space-y-4 rounded-sm border border-border bg-card p-6">
@@ -289,24 +329,20 @@ function TemplatesPanel() {
               disabled={saveMut.isPending || !editing.name || !editing.subject}
               className="rounded-sm bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
             >
-              {saveMut.isPending ? "Savingâ€¦" : "Save template"}
+              {saveMut.isPending ? "Saving…" : "Save template"}
             </button>
           </div>
         </div>
       )}
 
-      <section>
-        <h2 className="mono-caps text-muted-foreground">Billing</h2>
-        <BillingPanel />
-      </section>
     </div>
   );
 }
 
 const PLANS = [
-  { id: "starter", name: "Starter", price: "â‚¹2,499 / $49", sub: "Perfect for freelancers" },
-  { id: "growth", name: "Growth", price: "â‚¹7,499 / $149", sub: "For growing agencies" },
-  { id: "pro", name: "Pro", price: "â‚¹14,999 / $299", sub: "Unlimited scale + team" },
+  { id: "starter", name: "Starter", price: "\u20B92,499 / $49", sub: "Perfect for freelancers" },
+  { id: "growth", name: "Growth", price: "\u20B97,499 / $149", sub: "For growing agencies" },
+  { id: "pro", name: "Pro", price: "\u20B914,999 / $299", sub: "Unlimited scale + team" },
 ] as const;
 
 function BillingPanel() {
@@ -347,7 +383,7 @@ function BillingPanel() {
                   : "bg-foreground text-background hover:opacity-90"
               } disabled:opacity-50`}
             >
-              {active ? "Active" : planMut.isPending ? "â€¦" : "Switch plan"}
+              {active ? "Active" : planMut.isPending ? "\u2026" : "Switch plan"}
             </button>
           </div>
         );

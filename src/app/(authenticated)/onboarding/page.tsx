@@ -135,9 +135,9 @@ export default function OnboardingPage() {
         const parts = lines[i].split(",").map(s => s.trim());
         try {
           if (isInvoices) {
-            const [client_name, client_email, amount, due_date] = parts;
+            const [client_name, client_email, amount, due_date, invoice_number] = parts;
             const { importInvoices } = await import("@/lib/api-client");
-            await importInvoices({ rows: [{ client_name, client_email, amount: Number(amount), due_date }] });
+            await importInvoices({ rows: [{ client_name, client_email, amount: Number(amount), due_date, ...(invoice_number ? { invoice_number } : {}) }] });
           } else {
             const [name, email, source, ...notesParts] = parts;
             const { importLeads } = await import("@/lib/api-client");
@@ -281,7 +281,7 @@ export default function OnboardingPage() {
                 />
                 <span className="font-medium">{csvFile ? csvFile.name : "Upload CSV (invoices or leads)"}</span>
                 <span className="mt-1 text-xs opacity-60">
-                  {csvFile ? "Click to change file" : "CSV format: name/email/amount/due_date or name/email/source/notes"}
+                  {csvFile ? "Click to change file" : "CSV format: name/email/amount/due_date/invoice_number or name/email/source/notes"}
                 </span>
               </label>
               {csvFile && !csvLoading && (

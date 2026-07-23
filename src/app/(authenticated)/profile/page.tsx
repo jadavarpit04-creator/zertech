@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -6,10 +6,17 @@ import { toast } from "sonner";
 import { getProfile, updateProfile } from "@/lib/api-client";
 import { PageHeader } from "@/components/app-shell";
 
-const TEAM_SIZES = ["1 (Solo)", "2-5", "6-10", "11-25", "26-50", "50+"];
+const TEAM_SIZES: Array<{ value: string; label: string; sub: string }> = [
+  { value: "1 (Solo)", label: "1", sub: "Solo" },
+  { value: "2-5", label: "2-5", sub: "Small" },
+  { value: "6-10", label: "6-10", sub: "Growing" },
+  { value: "11-25", label: "11-25", sub: "Team" },
+  { value: "26-50", label: "26-50", sub: "Scale" },
+  { value: "50+", label: "50+", sub: "Enterprise" },
+];
 
 export default function ProfilePage() {
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ["profile"],
     queryFn: () => getProfile(),
   });
@@ -27,7 +34,7 @@ export default function ProfilePage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  if (isLoading) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
+
 
   return (
     <>
@@ -54,16 +61,34 @@ export default function ProfilePage() {
             </div>
             <div className="space-y-2 sm:col-span-2">
               <label className="mono-caps text-xs text-muted-foreground">Team size</label>
-              <select
-                value={teamSize}
-                onChange={(e) => setTeamSize(e.target.value)}
-                className="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground"
-              >
-                <option value="">Select…</option>
-                {TEAM_SIZES.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
+              <div className="grid grid-cols-3 gap-2">
+                {TEAM_SIZES.map((s) => {
+                  const active = teamSize === s.value;
+                  return (
+                    <button
+                      type="button"
+                      key={s.value}
+                      onClick={() => setTeamSize(s.value)}
+                      className={
+                        "flex flex-col items-center justify-center rounded-sm border px-2 py-2.5 text-center transition " +
+                        (active
+                          ? "border-foreground bg-primary text-primary-foreground"
+                          : "border-border bg-background text-foreground hover:bg-muted")
+                      }
+                    >
+                      <span className="text-sm font-semibold leading-none">{s.label}</span>
+                      <span
+                        className={
+                          "mt-1 text-[10px] leading-none " +
+                          (active ? "text-primary-foreground/70" : "text-muted-foreground")
+                        }
+                      >
+                        {s.sub}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
           <div className="mt-6">

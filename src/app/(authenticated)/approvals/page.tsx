@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -6,10 +6,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { listPendingDrafts, listArchivedDrafts, listScheduledDrafts, sendDraft, discardDraft, updateDraft, bulkApprove, scheduleDraft } from "@/lib/api-client";
 import { PageHeader, EmptyState } from "@/components/app-shell";
+import ExportButton from "@/app/(authenticated)/invoices/export-button";
 
 export default function ApprovalsPage() {
   const [tab, setTab] = useState<"pending" | "scheduled" | "archive">("pending");
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ["drafts", tab],
     queryFn: () =>
       tab === "pending"
@@ -59,7 +60,6 @@ export default function ApprovalsPage() {
     });
   };
 
-  if (isLoading) return <div className="p-8 text-sm text-muted-foreground">Loading approvals…</div>;
 
   return (
     <>
@@ -67,25 +67,28 @@ export default function ApprovalsPage() {
         eyebrow="Queue"
         title="Drafts"
         actions={
-          <div className="flex gap-1 rounded-sm border border-border p-1">
-            <button
-              onClick={() => setTab("pending")}
-              className={`rounded-sm px-3 py-1.5 text-xs ${tab === "pending" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Pending approval
-            </button>
-            <button
-              onClick={() => setTab("scheduled")}
-              className={`rounded-sm px-3 py-1.5 text-xs ${tab === "scheduled" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Scheduled
-            </button>
-            <button
-              onClick={() => setTab("archive")}
-              className={`rounded-sm px-3 py-1.5 text-xs ${tab === "archive" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Archive
-            </button>
+          <div className="flex items-center gap-2">
+            <ExportButton type="drafts" />
+            <div className="flex gap-1 rounded-sm border border-border p-1">
+              <button
+                onClick={() => setTab("pending")}
+                className={`rounded-sm px-3 py-1.5 text-xs ${tab === "pending" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Pending approval
+              </button>
+              <button
+                onClick={() => setTab("scheduled")}
+                className={`rounded-sm px-3 py-1.5 text-xs ${tab === "scheduled" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Scheduled
+              </button>
+              <button
+                onClick={() => setTab("archive")}
+                className={`rounded-sm px-3 py-1.5 text-xs ${tab === "archive" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Archive
+              </button>
+            </div>
           </div>
         }
       />
@@ -115,7 +118,7 @@ export default function ApprovalsPage() {
                   <div>
                     <span className="mono-caps rounded-sm bg-muted px-2 py-1 text-muted-foreground">{d.kind}</span>
                     <div className="mt-2 font-mono text-base font-semibold">{d.subject}</div>
-                    <div className="mt-1 text-sm text-muted-foreground">To: {d.recipient_name} · {d.recipient_email}</div>
+                    <div className="mt-1 text-sm text-muted-foreground">To: {d.recipient_name}  ·  {d.recipient_email}</div>
                   </div>
                   <div className="font-mono text-xs text-muted-foreground">{new Date(d.created_at).toLocaleString()}</div>
                 </div>
@@ -130,7 +133,7 @@ export default function ApprovalsPage() {
                   <div>
                     <span className="mono-caps rounded-sm bg-muted px-2 py-1 text-muted-foreground">{d.kind}</span>
                     <div className="mt-2 font-mono text-base font-semibold">{d.subject}</div>
-                    <div className="mt-1 text-sm text-muted-foreground">To: {d.recipient_name} · {d.recipient_email}</div>
+                    <div className="mt-1 text-sm text-muted-foreground">To: {d.recipient_name}  ·  {d.recipient_email}</div>
                     <div className="mt-1 font-mono text-xs text-muted-foreground">
                       Sends {new Date(d.scheduled_at).toLocaleString()}
                     </div>
@@ -220,7 +223,7 @@ function DraftCard({
               {draft.kind}
             </span>
             <div className="mt-2 font-mono text-sm">
-              To: <span className="text-muted-foreground">{draft.recipient_name} · {draft.recipient_email}</span>
+              To: <span className="text-muted-foreground">{draft.recipient_name}  ·  {draft.recipient_email}</span>
             </div>
           </div>
         </div>

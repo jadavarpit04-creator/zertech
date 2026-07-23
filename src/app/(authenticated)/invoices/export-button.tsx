@@ -4,7 +4,7 @@ import { useState } from "react";
 import { exportData } from "@/lib/api-client";
 import { toast } from "sonner";
 
-export default function ExportButton({ type }: { type: "invoices" | "leads" | "history" }) {
+export default function ExportButton({ type }: { type: "invoices" | "leads" | "history" | "drafts" }) {
   const [loading, setLoading] = useState(false);
 
   const handleExport = async () => {

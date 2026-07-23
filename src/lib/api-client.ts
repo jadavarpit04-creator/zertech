@@ -18,8 +18,14 @@ async function call<T = any>(fn: string, data?: any): Promise<T> {
 export function listInvoices() {
   return call<any[]>("listInvoices");
 }
-export function importInvoices(data: { rows: Array<{ client_name: string; client_email: string; amount: number; due_date: string }> }) {
+export function importInvoices(data: { rows: Array<{ client_name: string; client_email: string; amount: number; due_date: string; invoice_number?: string }> }) {
   return call<{ count: number }>("importInvoices", data);
+}
+export function updateInvoice(data: { id: string; client_name: string; client_email: string; amount: number; due_date: string; status?: string }) {
+  return call<{ ok: boolean }>("updateInvoice", data);
+}
+export function deleteInvoice(data: { id: string }) {
+  return call<{ ok: boolean }>("deleteInvoice", data);
 }
 export function runInvoiceScan() {
   return call<{ created: number; overdue: number }>("runInvoiceScan");
@@ -31,6 +37,10 @@ export function listLeads() {
 }
 export function importLeads(data: { rows: Array<{ name: string; email: string; source?: string; notes?: string }> }) {
   return call<{ count: number }>("importLeads", data);
+}
+
+export function updateLeadStatus(data: { id: string; status: "new" | "contacted" | "qualified" | "lost" }) {
+  return call<{ ok: boolean }>("updateLeadStatus", data);
 }
 
 // ---------- Drafts ----------
@@ -83,6 +93,7 @@ export function dashboardSummary() {
     recent: any[];
     recoveredAmount: number;
     avgResponseTime: number;
+    responseImprovement: string | null;
   }>("dashboardSummary");
 }
 
@@ -136,7 +147,7 @@ export function setPlan(plan: "starter" | "growth" | "pro") {
 }
 
 // ---------- New P1 features ----------
-export function exportData(type: "invoices" | "leads" | "history") {
+export function exportData(type: "invoices" | "leads" | "history" | "drafts") {
   return call<any[]>("exportData", { type });
 }
 export function bulkApprove(ids: string[]) {

@@ -48,6 +48,18 @@ const intakeSchema = z.discriminatedUnion("type", [
 
 export async function POST(req: NextRequest) {
   try {
+    // Security check — CRON_SECRET or Bearer token
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret) {
+      const authHeader = req.headers.get("authorization");
+      const querySecret = req.nextUrl.searchParams.get("secret");
+      const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : "";
+      const provided = bearerToken || querySecret || "";
+      if (provided !== cronSecret) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    }
+
     const body = await req.json();
 
     // 1. Validate payload

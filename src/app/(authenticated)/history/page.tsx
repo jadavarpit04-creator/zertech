@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useQuery } from "@tanstack/react-query";
 import { listActivity } from "@/lib/api-client";
@@ -6,12 +6,12 @@ import { PageHeader, EmptyState } from "@/components/app-shell";
 import ExportButton from "@/app/(authenticated)/invoices/export-button";
 
 export default function HistoryPage() {
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ["activity"],
     queryFn: () => listActivity(),
   });
 
-  if (isLoading) return <div className="p-8 text-sm text-muted-foreground">Loading history…</div>;
+
 
   return (
     <>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -15,12 +15,11 @@ const periods = [
 export default function ReportsPage() {
   const queryClient = useQueryClient();
   const [period, setPeriod] = useState<"30d" | "90d" | "year">("30d");
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ["reports", period],
     queryFn: () => reportsSummary(period),
   });
 
-  if (isLoading) return <div className="p-8 text-sm text-muted-foreground">Loading reports…</div>;
 
   const maxTrend = Math.max(1, ...(data?.recoveryTrend ?? []).map((t) => t.count));
 
@@ -66,7 +65,7 @@ export default function ReportsPage() {
             <Metric label="Reminders sent" value={data?.remindersSent ?? 0} />
             <Metric label="Paid after reminder" value={data?.paidAfterReminder ?? 0} />
             <Metric label="Recovery rate" value={`${data?.recoveryRate ?? 0}%`} />
-            <Metric label="₹ Recovered" value={`₹${formatINR(data?.recoveredAmount ?? 0)}`} />
+            <Metric label="\u20B9 Recovered" value={"\u20B9" + formatINR(data?.recoveredAmount ?? 0)} />
             <Metric label="Avg days to pay" value="20 days" />
           </div>
           <div className="mt-6">
@@ -97,7 +96,7 @@ export default function ReportsPage() {
             <Metric label="New leads" value={data?.leadsReceived ?? 0} />
             <Metric label="Leads contacted" value={data?.leadsContacted ?? 0} />
             <Metric label="Avg response" value="5 mins" />
-            <Metric label="Improvement" value={data?.responseImprovement ?? "—"} />
+            <Metric label="Improvement" value={data?.responseImprovement ?? "\u2014"} />
           </div>
         </section>
 
@@ -105,8 +104,8 @@ export default function ReportsPage() {
         <section className="rounded-sm border border-border bg-card p-6">
           <h2 className="font-mono text-lg font-semibold">Revenue Impact</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Metric label="Invoice recovery" value={`₹${formatINR(data?.recoveredAmount ?? 0)}`} />
-            <Metric label="Lead conversion (est.)" value={`₹${formatINR((data?.leadsContacted ?? 0) * 25000)}`} />
+            <Metric label="Invoice recovery" value={"\u20B9" + formatINR(data?.recoveredAmount ?? 0)} />
+            <Metric label="Lead conversion (est.)" value={"\u20B9" + formatINR((data?.leadsContacted ?? 0) * 25000)} />
             <Metric label="Time saved" value="42 hrs" />
           </div>
         </section>

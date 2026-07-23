@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { listInvoices, importInvoices } from "@/lib/api-client";
+import { listInvoices, importInvoices, updateInvoice, deleteInvoice } from "@/lib/api-client";
 import { PageHeader, EmptyState } from "@/components/app-shell";
 import ExportButton from "./export-button";
 
@@ -11,7 +11,7 @@ type Tab = "pending" | "sent" | "paid";
 
 export default function InvoicesPage() {
   const [tab, setTab] = useState<Tab>("pending");
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ["invoices", tab],
     queryFn: () => listInvoices(),
   });
@@ -19,8 +19,21 @@ export default function InvoicesPage() {
   const [selected, setSelected] = useState<any>(null);
   const [search, setSearch] = useState("");
   const [urgency, setUrgency] = useState<"all" | "urgent">("all");
+  const [editing, setEditing] = useState<any>(null);
 
-  if (isLoading) return <div className="p-8 text-sm text-muted-foreground">Loading invoices…</div>;
+  const queryClient = useQueryClient();
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => deleteInvoice({ id }),
+    onSuccess: () => { toast.success("Invoice deleted"); queryClient.invalidateQueries({ queryKey: ["invoices"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const updateMut = useMutation({
+    mutationFn: (data: any) => updateInvoice(data),
+    onSuccess: () => { toast.success("Invoice updated"); queryClient.invalidateQueries({ queryKey: ["invoices"] }); setEditing(null); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+
 
   const filtered = (data ?? []).filter((i: any) => {
     if (tab === "pending") return i.status === "pending" || i.status === "overdue";
@@ -133,6 +146,7 @@ export default function InvoicesPage() {
                   <Th>Amount</Th>
                   <Th>Due</Th>
                   <Th>Status</Th>
+                  <Th>Actions</Th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -147,6 +161,25 @@ export default function InvoicesPage() {
                     <Td className="font-mono">${i.amount}</Td>
                     <Td className="font-mono">{i.due_date}</Td>
                     <Td><StatusPill status={i.status} /></Td>
+                    <Td>
+                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => setEditing(i)}
+                          className="rounded-sm border border-border px-2.5 py-1 text-xs hover:bg-muted"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm("Delete this invoice?")) deleteMut.mutate(i.id);
+                          }}
+                          disabled={deleteMut.isPending}
+                          className="rounded-sm border border-border px-2.5 py-1 text-xs text-red-500 hover:bg-red-50 disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </Td>
                   </tr>
                 ))}
               </tbody>
@@ -156,6 +189,14 @@ export default function InvoicesPage() {
       </div>
       {open && <ImportModal onClose={() => setOpen(false)} />}
       {selected && <InvoiceDetailModal invoice={selected} onClose={() => setSelected(null)} />}
+      {editing && (
+        <EditInvoiceModal
+          invoice={editing}
+          onClose={() => setEditing(null)}
+          onSave={(data) => updateMut.mutate(data)}
+          busy={updateMut.isPending}
+        />
+      )}
     </>
   );
 }
@@ -178,7 +219,7 @@ function StatusPill({ status }: { status: string }) {
   );
 }
 
-// ────── Detail Modal ──────
+// ------ Detail Modal ------
 
 function InvoiceDetailModal({ invoice, onClose }: { invoice: any; onClose: () => void }) {
   const daysOverdue =
@@ -227,15 +268,15 @@ function InvoiceDetailModal({ invoice, onClose }: { invoice: any; onClose: () =>
   );
 }
 
-// ────── Import Modal ──────
+// ------ Import Modal ------
 
 function ImportModal({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
   const [text, setText] = useState(
-    "Acme Co, billing@acme.com, 2500, 2026-06-01\nGlobex, ap@globex.com, 800, 2026-05-15",
+    "Acme Co, billing@acme.com, 2500, 2026-06-01, INV-001\nGlobex, ap@globex.com, 800, 2026-05-15",
   );
   const mut = useMutation({
-    mutationFn: (rows: Array<{ client_name: string; client_email: string; amount: number; due_date: string }>) =>
+    mutationFn: (rows: Array<{ client_name: string; client_email: string; amount: number; due_date: string; invoice_number?: string }>) =>
       importInvoices({ rows }),
     onSuccess: (r) => {
       toast.success(`Imported ${r.count} invoice${r.count === 1 ? "" : "s"}`);
@@ -251,8 +292,8 @@ function ImportModal({ onClose }: { onClose: () => void }) {
       .map((l) => l.trim())
       .filter(Boolean)
       .map((l) => {
-        const [client_name, client_email, amount, due_date] = l.split(",").map((s) => s.trim());
-        return { client_name, client_email, amount: Number(amount), due_date };
+        const [client_name, client_email, amount, due_date, invoice_number] = l.split(",").map((s) => s.trim());
+        return { client_name, client_email, amount: Number(amount), due_date, ...(invoice_number ? { invoice_number } : {}) };
       });
     mut.mutate(rows);
   };
@@ -263,7 +304,7 @@ function ImportModal({ onClose }: { onClose: () => void }) {
         <div className="mono-caps text-muted-foreground">Import</div>
         <h2 className="mt-2 font-mono text-xl font-bold">Paste invoice rows</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Format: <code>client_name, email, amount, YYYY-MM-DD</code>
+          Format: <code>client_name, email, amount, YYYY-MM-DD, invoice_number</code> (invoice_number optional)
         </p>
         <textarea
           value={text}
@@ -285,6 +326,60 @@ function ImportModal({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
+
+// ------ Edit Modal ------
+
+function EditInvoiceModal({ invoice, onClose, onSave, busy }: { invoice: any; onClose: () => void; onSave: (data: any) => void; busy: boolean }) {
+  const [name, setName] = useState(invoice.client_name);
+  const [email, setEmail] = useState(invoice.client_email);
+  const [amount, setAmount] = useState(String(invoice.amount));
+  const [dueDate, setDueDate] = useState(invoice.due_date);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({
+      id: invoice.id,
+      client_name: name,
+      client_email: email,
+      amount: Number(amount),
+      due_date: dueDate,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div className="w-full max-w-md rounded-sm border border-border bg-card p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="mono-caps text-muted-foreground">Edit invoice</div>
+        <h2 className="mt-2 font-mono text-xl font-bold">{invoice.client_name}</h2>
+        <form onSubmit={submit} className="mt-6 space-y-4">
+          <div>
+            <label className="mono-caps mb-1 block text-xs text-muted-foreground">Client name</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} required className="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground" />
+          </div>
+          <div>
+            <label className="mono-caps mb-1 block text-xs text-muted-foreground">Email</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground" />
+          </div>
+          <div>
+            <label className="mono-caps mb-1 block text-xs text-muted-foreground">Amount</label>
+            <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required className="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground" />
+          </div>
+          <div>
+            <label className="mono-caps mb-1 block text-xs text-muted-foreground">Due date</label>
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} required className="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground" />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={onClose} className="rounded-sm border border-border px-4 py-2 text-sm">Cancel</button>
+            <button type="submit" disabled={busy} className="rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+              {busy ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 
 
 

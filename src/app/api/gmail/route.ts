@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, AuthError } from "@/lib/auth-helpers";
 import {
   initGmailOAuth,
@@ -13,13 +13,13 @@ import {
   updateEmailDetection,
 } from "@/lib/email-store";
 
-// ─── GET /api/gmail ───────────────────────────────────────────
+// â”€â”€â”€ GET /api/gmail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Returns the Google OAuth consent URL. The frontend redirects the
 // user to this URL to begin the Gmail connection flow.
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const url = initGmailOAuth();
+    const url = initGmailOAuth(req.nextUrl.origin);
     return NextResponse.json({ url });
   } catch (err: any) {
     console.error("[Gmail GET]", err);
@@ -30,20 +30,20 @@ export async function GET() {
   }
 }
 
-// ─── POST /api/gmail ──────────────────────────────────────────
+// â”€â”€â”€ POST /api/gmail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Action-based dispatcher:
-//   action: "callback" — exchange auth code for tokens
-//   action: "sync"     — sync last 30 days of emails + detect
-//   action: "detect"   — re-run detection on stored emails
+//   action: "callback" â€” exchange auth code for tokens
+//   action: "sync"     â€” sync last 30 days of emails + detect
+//   action: "detect"   â€” re-run detection on stored emails
 
 export async function POST(req: NextRequest) {
   try {
-    const { supabase, user } = await requireAuth(req.headers);
+    const { supabase, user } = await requireAuth();
     const body = await req.json().catch(() => ({}));
     const { action } = body;
 
     switch (action) {
-      // ── OAuth callback ───────────────────────────────────────
+      // â”€â”€ OAuth callback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       case "callback": {
         const { code } = body;
         if (!code) {
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        const tokens = await handleGmailCallback(code);
+        const tokens = await handleGmailCallback(code, req.nextUrl.origin);
 
         const { error: upsertError } = await supabase
           .from("integrations")
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true });
       }
 
-      // ── Email sync ───────────────────────────────────────────
+      // â”€â”€ Email sync â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       case "sync": {
         const { data: integration } = await supabase
           .from("integrations")
@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // ── Detection-only (re-run on stored emails) ─────────────
+      // â”€â”€ Detection-only (re-run on stored emails) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       case "detect": {
         const stored = await getStoredEmails(supabase, user.id, {
           limit: 200,

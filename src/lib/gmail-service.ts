@@ -1,4 +1,4 @@
-// Gmail API integration — direct REST calls (no googleapis dependency)
+﻿// Gmail API integration â€” direct REST calls (no googleapis dependency)
 // Uses GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET from environment.
 // Tokens are stored in the `integrations` Supabase table (token_data column).
 
@@ -12,7 +12,7 @@ const SCOPES = [
   "https://www.googleapis.com/auth/gmail.modify",
 ];
 
-// ─── Types ────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface GmailTokenResponse {
   access_token: string;
@@ -58,22 +58,21 @@ export interface DetectedLead extends EmailData {
   score: number;
 }
 
-// ─── 1. OAuth URL ─────────────────────────────────────────────
+// â”€â”€â”€ 1. OAuth URL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Generate the Google OAuth consent URL for Gmail scopes.
  * The frontend should redirect the user to this URL.
  * Stores GOOGLE_CLIENT_ID from env; throws if unset.
  */
-export function initGmailOAuth(): string {
+export function initGmailOAuth(origin?: string): string {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   if (!clientId) {
     throw new Error("GOOGLE_CLIENT_ID is not set");
   }
 
-  const redirectUri = `${
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-  }/api/gmail/callback`;
+  const baseUrl = origin || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:8080";
+  const redirectUri = `${baseUrl}/api/gmail/callback`;
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -87,14 +86,15 @@ export function initGmailOAuth(): string {
   return `${GMAIL_AUTH_URL}?${params.toString()}`;
 }
 
-// ─── 2. Token exchange ────────────────────────────────────────
+// â”€â”€â”€ 2. Token exchange â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Exchange the authorization code for access + refresh tokens.
  * @returns accessToken, refreshToken (may be null), and expiryDate (epoch ms).
  */
 export async function handleGmailCallback(
-  code: string
+  code: string,
+  origin?: string
 ): Promise<{
   accessToken: string;
   refreshToken: string | null;
@@ -106,9 +106,8 @@ export async function handleGmailCallback(
     throw new Error("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set");
   }
 
-  const redirectUri = `${
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-  }/api/gmail/callback`;
+  const baseUrl = origin || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:8080";
+  const redirectUri = `${baseUrl}/api/gmail/callback`;
 
   const res = await fetch(GMAIL_TOKEN_URL, {
     method: "POST",
@@ -135,7 +134,7 @@ export async function handleGmailCallback(
   };
 }
 
-// ─── 3. Token refresh ─────────────────────────────────────────
+// â”€â”€â”€ 3. Token refresh â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Refresh an expired access token using the stored refresh token.
@@ -172,7 +171,7 @@ export async function refreshAccessToken(
   };
 }
 
-// ─── 4. Email sync ────────────────────────────────────────────
+// â”€â”€â”€ 4. Email sync â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Fetch emails from the last 30 days via Gmail API.
@@ -187,7 +186,7 @@ export async function syncEmails(
   const thirtyDaysAgo =
     Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
 
-  // ── List messages ──
+  // â”€â”€ List messages â”€â”€
   const listRes = await fetch(
     `${GMAIL_API_BASE}/messages?q=after:${thirtyDaysAgo}&maxResults=50`,
     { headers: { Authorization: `Bearer ${accessToken}` } },
@@ -208,7 +207,7 @@ export async function syncEmails(
   const messages: Array<{ id: string; threadId: string }> =
     listData.messages ?? [];
 
-  // ── Fetch full message details in batches ──
+  // â”€â”€ Fetch full message details in batches â”€â”€
   const emails: EmailData[] = [];
   const batchSize = 10;
 
@@ -232,7 +231,7 @@ export async function syncEmails(
   return emails;
 }
 
-// ─── 5. Message parser ───────────────────────────────────────
+// â”€â”€â”€ 5. Message parser â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function parseGmailMessage(msg: GmailMessage): EmailData | null {
   if (!msg?.payload?.headers) return null;
@@ -260,14 +259,14 @@ function hasAttachment(payload: GmailMessage["payload"]): boolean {
   if (!payload) return false;
   // Direct attachment on the message itself
   if (payload.filename && payload.filename.length > 0) return true;
-  // Multipart message — check each part for a filename
+  // Multipart message â€” check each part for a filename
   if (payload.parts) {
     return payload.parts.some((p) => p.filename && p.filename.length > 0);
   }
   return false;
 }
 
-// ─── 8. Send email ────────────────────────────────────────
+// â”€â”€â”€ 8. Send email â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface SendOptions {
   to: string;
@@ -323,7 +322,7 @@ export async function sendEmail(
   return { id: data.id };
 }
 
-// ─── 9. Invoice detection ─────────────────────────────────────
+// â”€â”€â”€ 9. Invoice detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Scan emails for invoice-related content.
@@ -360,13 +359,13 @@ export function detectInvoices(emails: EmailData[]): DetectedInvoice[] {
   return results;
 }
 
-// ─── 7. Lead detection ────────────────────────────────────────
+// â”€â”€â”€ 7. Lead detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Scan emails for lead-related content.
  * Matches subjects containing: inquiry, quote, proposal, pricing,
  * demo, meeting, partnership, collaboration, estimate, consultation.
- * Scores 1–5 based on intent keywords and attachment presence.
+ * Scores 1â€“5 based on intent keywords and attachment presence.
  */
 export function detectLeads(emails: EmailData[]): DetectedLead[] {
   const leadKeywords = [

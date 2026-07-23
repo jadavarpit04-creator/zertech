@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { useClerk } from "@clerk/nextjs";
 import type { ReactNode } from "react";
-import { signOut } from "@/lib/auth-client";
 import {
   LayoutDashboard,
   FileText,
@@ -33,6 +33,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const pathname = usePathname();
 
+  const { signOut } = useClerk();
   const handleSignOut = async () => {
     await queryClient.cancelQueries();
     queryClient.clear();
@@ -41,8 +42,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
-      <aside className="hidden w-56 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
+    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+      <aside className="hidden w-56 shrink-0 flex-col overflow-y-hidden border-r border-border bg-sidebar md:flex">
         <Link href="/dashboard" className="flex h-24 items-center gap-2 border-b border-border px-5">
           <img src="/logo.png" alt="Logo" className="h-24 w-auto" />
         </Link>
@@ -82,7 +83,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <button onClick={handleSignOut} className="text-sm text-muted-foreground">Sign out</button>
       </div>
 
-      <main className="flex-1 pt-24 md:pt-0">
+      <main className="flex-1 overflow-y-auto pt-24 md:pt-0">
         <div className="md:hidden flex gap-1 overflow-x-auto border-b border-border px-2 py-2">
           {links.map((l) => {
             const active = pathname === l.to;

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, AuthError } from "@/lib/auth-helpers";
 import { z } from "zod";
 import {
@@ -45,7 +45,7 @@ const requestSchema = z.discriminatedUnion("kind", [
 export async function POST(req: NextRequest) {
   try {
     // Authenticate via Better-Auth
-    await requireAuth(req.headers);
+    await requireAuth();
 
     // Parse and validate
     const body = await req.json();
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
     const { kind, tone: explicitTone, data } = parsed.data;
 
-    // Determine tone — if not explicitly provided, use escalation logic (invoice only)
+    // Determine tone â€” if not explicitly provided, use escalation logic (invoice only)
     let tone: Tone;
     if (explicitTone) {
       tone = explicitTone;

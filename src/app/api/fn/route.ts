@@ -10,9 +10,12 @@ const handlerMap: Record<
 > = {
   listInvoices: (s, u) => handlers.listInvoices(s, u),
   importInvoices: (s, u, b) => handlers.importInvoices(s, u, b),
+  updateInvoice: (s, u, b) => handlers.updateInvoice(s, u, b),
+  deleteInvoice: (s, u, b) => handlers.deleteInvoice(s, u, b),
   runInvoiceScan: (s, u) => handlers.runInvoiceScan(s, u),
   listLeads: (s, u) => handlers.listLeads(s, u),
   importLeads: (s, u, b) => handlers.importLeads(s, u, b),
+  updateLeadStatus: (s, u, b) => handlers.updateLeadStatus(s, u, b),
   listPendingDrafts: (s, u) => handlers.listPendingDrafts(s, u),
   updateDraft: (s, u, b) => handlers.updateDraft(s, u, b),
   sendDraft: (s, u, b) => handlers.sendDraft(s, u, b),
@@ -39,7 +42,7 @@ const handlerMap: Record<
 
 export async function POST(req: NextRequest) {
   try {
-    const { supabase, user } = await requireAuth(req.headers);
+    const { supabase, user } = await requireAuth();
 
     const { fn, data } = await req.json();
     const handler = handlerMap[fn];

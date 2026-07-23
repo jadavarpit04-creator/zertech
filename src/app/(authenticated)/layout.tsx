@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -11,7 +11,7 @@ export default function AuthenticatedLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { data: session, isPending } = useSession();
+  const { user: session, isLoaded: isPending } = useSession();
   const [initialCheck, setInitialCheck] = useState(false);
 
   useEffect(() => {

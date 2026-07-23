@@ -6,7 +6,7 @@ import { MessageCircle, X, Send, RotateCcw } from "lucide-react";
 type Msg = { role: "user" | "assistant"; content: string };
 
 const WELCOME =
-  "Hi! I&apos;m the Zertech AI assistant. Ask me about our follow-up automation, pricing, or how to get started — or pick a topic below.";
+  "Hi! I'm the Zertech AI assistant. Ask me about our follow-up automation, pricing, or how to get started — or pick a topic below.";
 
 const SUGGESTIONS = [
   { label: "Website Services", q: "What services does Zertech offer for websites?" },

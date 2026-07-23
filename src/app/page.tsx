@@ -389,7 +389,7 @@ function Features() {
       <div className="mx-auto max-w-6xl px-6 py-24">
         <div className="mono-caps text-muted-foreground">Features</div>
         <h2 className="mt-4 font-mono text-3xl font-bold md:text-4xl">
-          Built for agencies that can&apos;t afford to drop follow-ups.
+          Built for agencies that can&rsquo;t afford to drop follow-ups.
         </h2>
         <div className="mt-12 grid gap-px overflow-hidden rounded-sm border border-border bg-border md:grid-cols-3">
           {items.map((it, i) => (

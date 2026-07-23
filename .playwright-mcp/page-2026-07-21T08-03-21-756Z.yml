@@ -1,0 +1,254 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link [ref=e5] [cursor=pointer]:
+          - /url: /
+          - img "Logo" [ref=e6]
+        - navigation [ref=e7]:
+          - link "Workflows" [ref=e8] [cursor=pointer]:
+            - /url: "#workflows"
+          - link "How it works" [ref=e9] [cursor=pointer]:
+            - /url: "#how"
+          - link "Pricing" [ref=e10] [cursor=pointer]:
+            - /url: "#pricing"
+        - generic [ref=e11]:
+          - link "Get started" [ref=e12] [cursor=pointer]:
+            - /url: /auth?mode=signup
+          - link "Sign in" [ref=e13] [cursor=pointer]:
+            - /url: /auth
+    - generic [ref=e15]:
+      - heading "Zertech. Get paid." [level=1] [ref=e16]: Zertech.Get paid.
+      - paragraph [ref=e17]: An AI agent that drafts invoice reminders and lead responses for agencies. You approve, it sends, everything logged.
+      - generic [ref=e18]:
+        - link "Start free" [ref=e19] [cursor=pointer]:
+          - /url: /auth
+        - link "See how it works" [ref=e22] [cursor=pointer]:
+          - /url: "#how"
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - generic [ref=e25]: 20%+
+          - generic [ref=e26]: faster payment
+        - generic [ref=e27]:
+          - generic [ref=e28]: 30%+
+          - generic [ref=e29]: faster lead reply
+        - generic [ref=e30]:
+          - generic [ref=e31]: "0"
+          - generic [ref=e32]: missed follow-ups
+    - generic [ref=e34]:
+      - generic [ref=e35]: Companies we collaborate with
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - img "Stripe logo" [ref=e39]
+          - generic [ref=e40]: Stripe
+        - generic [ref=e41]:
+          - img "Notion logo" [ref=e42]
+          - generic [ref=e43]: Notion
+        - generic [ref=e44]:
+          - img "Linear logo" [ref=e45]
+          - generic [ref=e46]: Linear
+        - generic [ref=e47]:
+          - img "Vercel logo" [ref=e48]
+          - generic [ref=e49]: Vercel
+        - generic [ref=e50]:
+          - img "Figma logo" [ref=e51]
+          - generic [ref=e52]: Figma
+        - generic [ref=e53]:
+          - img "Slack logo" [ref=e54]
+          - generic [ref=e55]: Slack
+        - generic [ref=e56]:
+          - img "Shopify logo" [ref=e57]
+          - generic [ref=e58]: Shopify
+        - generic [ref=e59]:
+          - img "HubSpot logo" [ref=e60]
+          - generic [ref=e61]: HubSpot
+        - generic [ref=e62]:
+          - img "Stripe logo" [ref=e63]
+          - generic [ref=e64]: Stripe
+        - generic [ref=e65]:
+          - img "Notion logo" [ref=e66]
+          - generic [ref=e67]: Notion
+        - generic [ref=e68]:
+          - img "Linear logo" [ref=e69]
+          - generic [ref=e70]: Linear
+        - generic [ref=e71]:
+          - img "Vercel logo" [ref=e72]
+          - generic [ref=e73]: Vercel
+        - generic [ref=e74]:
+          - img "Figma logo" [ref=e75]
+          - generic [ref=e76]: Figma
+        - generic [ref=e77]:
+          - img "Slack logo" [ref=e78]
+          - generic [ref=e79]: Slack
+        - generic [ref=e80]:
+          - img "Shopify logo" [ref=e81]
+          - generic [ref=e82]: Shopify
+        - generic [ref=e83]:
+          - img "HubSpot logo" [ref=e84]
+          - generic [ref=e85]: HubSpot
+    - generic [ref=e88]:
+      - generic [ref=e89]:
+        - generic [ref=e90]: 01 / Problem
+        - heading "Manual follow-ups cost agencies money." [level=2] [ref=e91]
+      - generic [ref=e92]:
+        - paragraph [ref=e93]: Invoices sit overdue for weeks because no one remembers to nudge.
+        - paragraph [ref=e94]: Fresh leads go cold while ops manually copies templates into email.
+        - paragraph [ref=e95]: Nothing gets logged, so nothing gets measured — and the same story repeats next month.
+    - generic [ref=e97]:
+      - generic [ref=e98]: By the numbers
+      - heading "The cost of doing follow-ups by hand." [level=2] [ref=e99]
+      - generic [ref=e100]:
+        - generic [ref=e101]:
+          - generic [ref=e102]: 47 hrs
+          - generic [ref=e103]: industry avg lead response time
+        - generic [ref=e104]:
+          - generic [ref=e105]: 5 mins
+          - generic [ref=e106]: response = 21× more qualified leads
+        - generic [ref=e107]:
+          - generic [ref=e108]: 15–25%
+          - generic [ref=e109]: revenue lost to late invoices
+        - generic [ref=e110]:
+          - generic [ref=e111]: 8–12 hrs
+          - generic [ref=e112]: weekly manual follow-up work
+    - generic [ref=e114]:
+      - generic [ref=e115]: 02 / Workflows
+      - heading "Three workflows. Zero busywork." [level=2] [ref=e116]
+      - generic [ref=e117]:
+        - generic [ref=e118]:
+          - heading "Invoice reminders" [level=3] [ref=e122]
+          - paragraph [ref=e123]: Detects overdue invoices, drafts a firm-but-polite nudge, waits for your approval.
+        - generic [ref=e124]:
+          - heading "Lead follow-ups" [level=3] [ref=e130]
+          - paragraph [ref=e131]: New lead in? Get a tailored first-reply draft in the queue, ready to send.
+        - generic [ref=e132]:
+          - heading "History log" [level=3] [ref=e136]
+          - paragraph [ref=e137]: Every draft, edit, approval and send — tracked and searchable. Syncs to Sheets.
+    - generic [ref=e139]:
+      - generic [ref=e140]: Features
+      - heading "Built for agencies that can't afford to drop follow-ups." [level=2] [ref=e141]
+      - generic [ref=e142]:
+        - generic [ref=e143]:
+          - heading "AI-drafted, human-approved" [level=3] [ref=e146]
+          - paragraph [ref=e147]: Every reminder and reply is generated with context — you approve, edit, or discard in one click.
+        - generic [ref=e148]:
+          - heading "Lead scoring 1–5" [level=3] [ref=e152]
+          - paragraph [ref=e153]: Intent signals (budget, timeline, urgency) auto-rank leads so the hot ones surface at the top.
+        - generic [ref=e154]:
+          - heading "Escalation sequence" [level=3] [ref=e158]
+          - paragraph [ref=e159]: Overdue invoice at 7, 14, 30 days — friendly → professional → firm. No awkwardness required.
+        - generic [ref=e160]:
+          - heading "Approval-first by default" [level=3] [ref=e163]
+          - paragraph [ref=e164]: Nothing sends without you. Toggle auto-send per workflow when you're ready to trust it.
+        - generic [ref=e165]:
+          - heading "Gmail + Outlook" [level=3] [ref=e169]
+          - paragraph [ref=e170]: Connect your existing inbox. We send from your address, threads land where they belong.
+        - generic [ref=e171]:
+          - heading "Sheets sync" [level=3] [ref=e175]
+          - paragraph [ref=e176]: Every action written to Google Sheets in real time — audit-ready without lifting a finger.
+    - generic [ref=e178]:
+      - generic [ref=e179]: 03 / Flow
+      - heading "Four steps. Then it runs." [level=2] [ref=e180]
+      - generic [ref=e181]:
+        - generic [ref=e182]:
+          - generic [ref=e183]: "01"
+          - generic [ref=e185]: Connect
+          - generic [ref=e186]: Sign in and link your inbox.
+        - generic [ref=e187]:
+          - generic [ref=e188]: "02"
+          - generic [ref=e190]: Import
+          - generic [ref=e191]: Bring in invoices and leads.
+        - generic [ref=e192]:
+          - generic [ref=e193]: "03"
+          - generic [ref=e195]: Review
+          - generic [ref=e196]: AI drafts messages. You approve or edit.
+        - generic [ref=e197]:
+          - generic [ref=e198]: "04"
+          - generic [ref=e200]: Send & log
+          - generic [ref=e201]: Message goes out. Action logged automatically.
+    - generic [ref=e203]:
+      - generic [ref=e204]: Voices
+      - heading "Agencies that stopped chasing." [level=2] [ref=e205]
+      - generic [ref=e206]:
+        - generic [ref=e207]:
+          - paragraph [ref=e211]: "\"We recovered ₹4.2L of overdue invoices in the first month. The drafts sound like me, and I still get to approve every send.\""
+          - generic [ref=e212]:
+            - generic [ref=e213]: Raj M.
+            - generic [ref=e214]: Founder, digital marketing agency
+        - generic [ref=e215]:
+          - paragraph [ref=e219]: "\"Lead response went from a day to under 10 minutes. Close rate on inbound went up almost 2×.\""
+          - generic [ref=e220]:
+            - generic [ref=e221]: Priya S.
+            - generic [ref=e222]: Ops Manager, SaaS dev shop
+        - generic [ref=e223]:
+          - paragraph [ref=e227]: "\"I stopped dreading Monday. All my follow-ups are queued and ready before I open Gmail.\""
+          - generic [ref=e228]:
+            - generic [ref=e229]: Arjun K.
+            - generic [ref=e230]: Freelance designer
+    - generic [ref=e232]:
+      - generic [ref=e233]: 04 / Pricing
+      - heading "Simple. Monthly. Cancel anytime." [level=2] [ref=e234]
+      - generic [ref=e235]:
+        - generic [ref=e236]:
+          - generic [ref=e237]: Starter
+          - generic [ref=e238]:
+            - generic [ref=e239]: $49
+            - generic [ref=e240]: /mo
+          - list [ref=e241]:
+            - listitem [ref=e242]: 1 inbox
+            - listitem [ref=e245]: 100 follow-ups / mo
+            - listitem [ref=e248]: Sheets sync
+            - listitem [ref=e251]: Email support
+          - link "Get started" [ref=e254] [cursor=pointer]:
+            - /url: /auth
+        - generic [ref=e255]:
+          - generic [ref=e256]: Growth
+          - generic [ref=e257]:
+            - generic [ref=e258]: $149
+            - generic [ref=e259]: /mo
+          - list [ref=e260]:
+            - listitem [ref=e261]: 3 inboxes
+            - listitem [ref=e264]: 1,000 follow-ups / mo
+            - listitem [ref=e267]: Sheets sync
+            - listitem [ref=e270]: Priority support
+          - link "Get started" [ref=e273] [cursor=pointer]:
+            - /url: /auth
+        - generic [ref=e274]:
+          - generic [ref=e275]: Pro
+          - generic [ref=e276]:
+            - generic [ref=e277]: $299
+            - generic [ref=e278]: /mo
+          - list [ref=e279]:
+            - listitem [ref=e280]: Unlimited inboxes
+            - listitem [ref=e283]: Unlimited follow-ups
+            - listitem [ref=e286]: Custom templates
+            - listitem [ref=e289]: Dedicated support
+          - link "Get started" [ref=e292] [cursor=pointer]:
+            - /url: /auth
+    - generic [ref=e294]:
+      - generic [ref=e295]: FAQ
+      - heading "Answers." [level=2] [ref=e296]
+      - generic [ref=e297]:
+        - button "Will messages send automatically without me? No — approval is on by default. Every draft waits for you to click send. You can flip on auto-send per workflow once you trust it." [ref=e298] [cursor=pointer]:
+          - generic [ref=e299]: Will messages send automatically without me?
+          - paragraph [ref=e302]: No — approval is on by default. Every draft waits for you to click send. You can flip on auto-send per workflow once you trust it.
+        - button "Do you support Outlook or only Gmail?" [ref=e303] [cursor=pointer]
+        - button "Where does the data live?" [ref=e307] [cursor=pointer]
+        - button "How is lead scoring calculated?" [ref=e311] [cursor=pointer]
+        - button "Can I edit templates?" [ref=e315] [cursor=pointer]
+        - button "What if I cancel?" [ref=e319] [cursor=pointer]
+    - generic [ref=e324]:
+      - generic [ref=e325]: Start today
+      - heading "Stop chasing. Start collecting." [level=2] [ref=e326]
+      - paragraph [ref=e327]: 14-day free trial. No credit card. Set up your first workflow in under 5 minutes.
+      - generic [ref=e328]:
+        - link "Start free trial" [ref=e329] [cursor=pointer]:
+          - /url: /auth
+        - link "See pricing" [ref=e332] [cursor=pointer]:
+          - /url: "#pricing"
+    - contentinfo [ref=e333]:
+      - generic [ref=e334]:
+        - img "Logo" [ref=e336]
+        - generic [ref=e337]: © 2026. All rights reserved.
+  - region "Notifications alt+T"
+  - button "Open AI assistant" [ref=e338] [cursor=pointer]
+  - alert [ref=e341]

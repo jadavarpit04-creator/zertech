@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -8,7 +8,7 @@ import { dashboardSummary, runInvoiceScan } from "@/lib/api-client";
 import { PageHeader, EmptyState } from "@/components/app-shell";
 
 export default function DashboardPage() {
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ["dashboard"],
     queryFn: () => dashboardSummary(),
   });
@@ -22,7 +22,7 @@ export default function DashboardPage() {
     onError: (e) => toast.error(e.message),
   });
 
-  if (isLoading) return <div className="p-8 text-sm text-muted-foreground">Loading dashboard…</div>;
+
 
   const stats = [
     { label: "Pending approvals", value: data?.pending ?? 0, to: "/approvals" },
@@ -31,7 +31,7 @@ export default function DashboardPage() {
     { label: "Overdue invoices", value: data?.overdue ?? 0, to: "/invoices" },
     { label: "New leads", value: data?.newLeads ?? 0, to: "/leads" },
     { label: "Recovered this month", value: `$${data?.recoveredAmount ?? 0}`, to: "/invoices" },
-    { label: "Avg response time", value: data?.avgResponseTime != null ? `${data.avgResponseTime}h` : "—", to: "/history" },
+    { label: "Avg response time", value: data?.responseImprovement ?? (data?.avgResponseTime != null ? `${data.avgResponseTime}h` : "No data yet"), subtitle: data?.avgResponseTime != null ? `${data.avgResponseTime}h avg` : undefined, to: "/history" },
   ];
 
   return (
@@ -61,6 +61,9 @@ export default function DashboardPage() {
               <Link href={s.to} className="block bg-card p-6 transition hover:bg-accent">
                 <div className="mono-caps text-muted-foreground">{s.label}</div>
                 <div className="mt-3 font-mono text-4xl font-bold tracking-tight">{s.value}</div>
+                {(s as any).subtitle && (
+                  <div className="mt-1 font-mono text-xs text-muted-foreground">{(s as any).subtitle}</div>
+                )}
               </Link>
             </motion.div>
           ))}
@@ -70,7 +73,7 @@ export default function DashboardPage() {
           <div className="mb-4 flex items-baseline justify-between">
             <h2 className="font-mono text-lg font-semibold">Recent activity</h2>
             <Link href="/history" className="text-xs text-muted-foreground hover:text-foreground">
-              View all →
+              View all {"\u2192"}
             </Link>
           </div>
           {(data?.recent ?? []).length === 0 ? (
@@ -116,3 +119,4 @@ function formatAction(action: string) {
   };
   return map[action] ?? action;
 }
+

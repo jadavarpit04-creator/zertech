@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { signIn, signUp, useSession } from "@/lib/auth-client";
+import { useSignIn, useSignUp, useUser, useClerk } from "@clerk/nextjs";
 
 const TEAM_SIZES: Array<{ value: string; label: string; sub: string }> = [
   { value: "1 (Solo)", label: "1", sub: "Solo" },
@@ -18,7 +18,10 @@ const TEAM_SIZES: Array<{ value: string; label: string; sub: string }> = [
 
 export default function AuthPage() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { signIn } = useSignIn();
+  const { setActive } = useClerk();
+  const { signUp } = useSignUp();
+  const { user, isLoaded: userLoaded } = useUser();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,19 +29,17 @@ export default function AuthPage() {
   const [company, setCompany] = useState("");
   const [teamSize, setTeamSize] = useState("");
   const [busy, setBusy] = useState(false);
-  const [justSignedUp, setJustSignedUp] = useState(false);
 
   useEffect(() => {
     const m = new URLSearchParams(window.location.search).get("mode");
     if (m === "signup") setMode("signup");
   }, []);
 
-  // If already logged in, redirect to dashboard (but not right after sign-up)
   useEffect(() => {
-    if (session && !justSignedUp) {
+    if (userLoaded && user) {
       router.push("/dashboard");
     }
-  }, [session, router, justSignedUp]);
+  }, [user, userLoaded, router]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,36 +51,27 @@ export default function AuthPage() {
           setBusy(false);
           return;
         }
-        await signUp.email(
-          { email, password, name: fullName },
-          {
-            onSuccess: () => {
-              setJustSignedUp(true);
-              toast.success("Account created! Welcome to Zertech.");
-              router.push("/onboarding");
-            },
-            onError: (ctx) => {
-              toast.error(ctx.error.message ?? "Something went wrong");
-            },
-          }
-        );
+        if (!signUp || !signIn) return;
+
+        const result: any = await signUp.create({
+          emailAddress: email,
+          password,
+          firstName: fullName,
+        });
+
+        await setActive({ session: (result as any).createdSessionId });
+        toast.success("Account created! Welcome to Zertech.");
+        router.push("/onboarding");
       } else {
-        await signIn.email(
-          { email, password, callbackURL: window.location.origin + "/dashboard" },
-          {
-            onSuccess: (ctx) => {
-              if (ctx.data?.url) {
-                window.location.href = ctx.data.url;
-              } else {
-                window.location.href = "/dashboard";
-              }
-            },
-            onError: (ctx) => {
-              toast.error(ctx.error.message ?? "Invalid credentials");
-              setBusy(false);
-            },
-          }
-        );
+        if (!signIn) return;
+
+        const result = await signIn.create({
+          identifier: email,
+          password,
+        });
+
+        await setActive({ session: (result as any).createdSessionId });
+        router.push("/dashboard");
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
@@ -89,10 +81,12 @@ export default function AuthPage() {
   };
 
   const google = async () => {
+    if (!signIn) return;
     setBusy(true);
-    await signIn.social({
-      provider: "google",
-      callbackURL: window.location.origin + "/auth/callback",
+    await (signIn as any).authenticateWithRedirect({
+      strategy: "oauth_google",
+      redirectUrl: "/auth/sso-callback",
+      redirectUrlComplete: "/dashboard",
     });
     setBusy(false);
   };
@@ -213,7 +207,7 @@ export default function AuthPage() {
               disabled={busy}
               className="w-full rounded-sm bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
-              {busy ? "…" : mode === "signin" ? "Sign in" : "Create account"}
+              {busy ? "â€¦" : mode === "signin" ? "Sign in" : "Create account"}
             </button>
           </form>
 
@@ -231,3 +225,11 @@ export default function AuthPage() {
     </div>
   );
 }
+
+
+
+
+
+
+
+

@@ -1,22 +1,24 @@
 "use client";
 
+import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { useSession } from "@/lib/auth-client";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const { data: session, isPending } = useSession();
+  const { isLoaded, user } = useUser();
 
   useEffect(() => {
-    if (isPending) return;
-    if (!session) {
+    if (!isLoaded) return;
+    if (!user) {
       router.replace("/auth");
       return;
     }
-    // Always send new sign-ups to onboarding (they can skip it)
-    router.replace("/onboarding");
-  }, [session, isPending, router]);
+    const isNewUser =
+      user.createdAt &&
+      Date.now() - new Date(user.createdAt).getTime() < 60_000;
+    router.replace(isNewUser ? "/onboarding" : "/dashboard");
+  }, [isLoaded, user, router]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">

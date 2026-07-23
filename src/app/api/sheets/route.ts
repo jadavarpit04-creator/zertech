@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, AuthError } from "@/lib/auth-helpers";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import * as sheets from "@/lib/sheets-service";
@@ -15,12 +15,10 @@ export async function GET(req: NextRequest) {
 
     // --- OAuth callback from Google redirect ---
     if (code) {
-      const { auth } = await import("@/lib/auth");
-      const session = await auth.api.getSession({
-        headers: req.headers,
-      });
+      const { auth } = await import("@clerk/nextjs/server");
+      const { userId } = await auth();
 
-      if (!session?.user) {
+      if (!userId) {
         return NextResponse.redirect(new URL("/auth", req.url));
       }
 
@@ -29,7 +27,7 @@ export async function GET(req: NextRequest) {
 
       await supabaseAdmin.from("integrations").upsert(
         {
-          user_id: session.user.id,
+          user_id: userId,
           provider: "sheets",
           connected: true,
           meta: {
@@ -42,7 +40,7 @@ export async function GET(req: NextRequest) {
       );
 
       await supabaseAdmin.from("activity_log").insert({
-        user_id: session.user.id,
+        user_id: userId,
         action: "integration.connected",
         entity_type: "integration",
         meta: { provider: "sheets" },
@@ -75,7 +73,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const { supabase, user } = await requireAuth(req.headers);
+    const { supabase, user } = await requireAuth();
     const { searchParams } = new URL(req.url);
     const action = searchParams.get("action") ?? "connect";
 
@@ -183,8 +181,8 @@ export async function POST(req: NextRequest) {
             hour12: false,
           }),
           client,
-          invoiceNumber: draft.source_id?.slice(0, 8) ?? "—",
-          amount: `₹${amount.toFixed(2)}`,
+          invoiceNumber: draft.source_id?.slice(0, 8) ?? "â€”",
+          amount: `â‚¹${amount.toFixed(2)}`,
           status: draft.status,
         }
       );

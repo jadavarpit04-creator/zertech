@@ -799,7 +799,7 @@ export async function dashboardSummary(supabase: SupabaseClient, userId: string)
     supabase
       .from("drafts")
       .select("id", { count: "exact", head: true })
-      .eq("status", "sent"),
+      .eq("status", "sent").eq("user_id", userId),
     supabase
       .from("invoices")
       .select("id", { count: "exact", head: true })
@@ -813,7 +813,8 @@ export async function dashboardSummary(supabase: SupabaseClient, userId: string)
       .select("id", { count: "exact", head: true })
       .eq("status", "sent")
       .gte("sent_at", todayStart)
-      .lte("sent_at", todayEnd),
+      .lte("sent_at", todayEnd)
+      .eq("user_id", userId),
   ]);
 
   // recoveredAmount: sum of invoice amounts for sent drafts in the current month
@@ -967,33 +968,58 @@ export async function bulkApprove(
   body: { ids: string[] }
 ) {
   const { ids } = z.object({ ids: z.array(z.string()).min(1) }).parse(body);
-  const { data: drafts, error } = await supabase
-    .from("drafts")
-    .update({ status: "sent", sent_at: new Date().toISOString() })
-    .in("id", ids)
-    .select();
-  if (error) throw new Error(error.message);
 
-  // Update related leads to contacted
+  // Fetch all drafts first
+  const { data: drafts } = await supabase
+    .from("drafts")
+    .select("*")
+    .in("id", ids);
+
+  const sent: string[] = [];
+  const failed: Array<{ id: string; error: string }> = [];
+
   for (const draft of drafts ?? []) {
-    if (draft?.kind === "lead" && draft.source_id) {
+    try {
+      // Attempt to send the email (same logic as sendDraft)
+      if (draft.recipient_email) {
+        const tokens = await getGmailTokens(supabase, userId);
+        if (tokens) {
+          await sendEmail(tokens.accessToken, tokens.refreshToken, {
+            to: draft.recipient_email,
+            subject: draft.subject ?? "Follow-up",
+            body: draft.body ?? "",
+          });
+        }
+      }
+
+      // Mark as sent
       await supabase
-        .from("leads")
-        .update({ status: "contacted" })
-        .eq("id", draft.source_id);
+        .from("drafts")
+        .update({ status: "sent", sent_at: new Date().toISOString() })
+        .eq("id", draft.id);
+
+      if (draft?.kind === "lead" && draft.source_id) {
+        await supabase
+          .from("leads")
+          .update({ status: "contacted" })
+          .eq("id", draft.source_id);
+      }
+
+      await supabase.from("activity_log").insert({
+        user_id: userId,
+        action: "draft.sent",
+        entity_type: draft?.kind,
+        entity_id: draft?.source_id,
+        meta: { draft_id: draft.id, sent_via: "gmail", bulk: true },
+      });
+
+      sent.push(draft.id);
+    } catch (err: any) {
+      failed.push({ id: draft.id, error: err.message });
     }
   }
 
-  await supabase.from("activity_log").insert(
-    (drafts ?? []).map((d) => ({
-      user_id: userId,
-      action: "draft.sent",
-      entity_type: d?.kind,
-      entity_id: d?.source_id,
-      meta: { draft_id: d.id, would_send_via: "gmail", bulk: true },
-    }))
-  );
-  return { ok: true, count: drafts?.length ?? 0 };
+  return { ok: failed.length === 0, sent: sent.length, failed: failed.length, errors: failed };
 }
 
 export async function scheduleDraft(
@@ -1006,7 +1032,7 @@ export async function scheduleDraft(
     .parse(body);
   const { error } = await supabase
     .from("drafts")
-    .update({ scheduled_at: scheduled_for })
+    .update({ scheduled_at: scheduled_for, status: "scheduled" })
     .eq("id", id);
   if (error) throw new Error(error.message);
   return { ok: true };
@@ -1045,7 +1071,7 @@ export async function toggleIntegration(
   body: { provider: string; connected: boolean }
 ) {
   const { provider, connected } = z
-    .object({ provider: z.enum(["gmail", "sheets", "outlook", "slack"]), connected: z.boolean() })
+    .object({ provider: z.enum(["gmail", "sheets", "outlook", "slack", "make"]), connected: z.boolean() })
     .parse(body);
   const { error } = await supabase.from("integrations").upsert(
     { user_id: userId, provider, connected },
@@ -1068,7 +1094,7 @@ export async function saveIntegrationMeta(
 ) {
   const { provider, meta } = z
     .object({
-      provider: z.enum(["gmail", "sheets", "outlook", "slack"]),
+      provider: z.enum(["gmail", "sheets", "outlook", "slack", "make"]),
       meta: z.record(z.any()),
     })
     .parse(body);

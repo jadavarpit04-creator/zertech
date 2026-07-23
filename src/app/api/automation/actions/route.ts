@@ -28,12 +28,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing action field" }, { status: 400 });
     }
 
-    // Authenticate via session or API key
+    // Authenticate via session or fallback to system
     let userId = "";
-    const { auth } = await import("@/lib/auth");
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (session?.user) {
-      userId = session.user.id;
+    const { auth } = await import("@clerk/nextjs/server");
+    const session = await auth();
+    if (session.userId) {
+      userId = session.userId;
     } else {
       userId = "system";
     }
@@ -83,6 +83,7 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
 
 
 

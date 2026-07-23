@@ -12,7 +12,7 @@
  */
 
 const AP_SECRET = process.env.AP_WEBHOOK_SECRET || "";
-const BASE = process.env.NEXT_PUBLIC_APP_URL || "https://zertech-iota.vercel.app";
+const BASE = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:8080";
 
 async function callWebhook(url: string, payload: unknown): Promise<boolean> {
   if (!url) return false;
