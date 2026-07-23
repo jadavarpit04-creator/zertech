@@ -67,6 +67,11 @@ export default function DashboardPage() {
               </Link>
             </motion.div>
           ))}
+          {/* Fill empty cells so grid doesn't show blank box */}
+          {stats.length % 4 !== 0 &&
+            Array.from({ length: 4 - (stats.length % 4) }).map((_, i) => (
+              <div key={`empty-${i}`} className="bg-card" />
+            ))}
         </div>
 
         <section>
