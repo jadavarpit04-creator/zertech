@@ -67,7 +67,14 @@ export default function AuthPage() {
       const e = err as { errors?: Array<{ long_message?: string; message?: string }> };
       if (e && Array.isArray(e.errors) && e.errors.length > 0) {
         const first = e.errors[0];
-        return first?.long_message || first?.message || "Something went wrong.";
+        // Clerk SDK errors use either snake_case (long_message) or camelCase
+        // (longMessage) depending on the code path -- handle both.
+        return (
+          first?.long_message ||
+          first?.longMessage ||
+          first?.message ||
+          "Something went wrong."
+        );
       }
       if (err instanceof Error && err.message) return err.message;
       return "Something went wrong. Please try again.";
@@ -130,10 +137,15 @@ export default function AuthPage() {
           return;
         }
 
-        // status is "missing_requirements" -- e.g. email/phone verification needed.
+        // status is "missing_requirements" -- most commonly a weak/breached
+        // password (Clerk rejects those with a 422) or a missing required field.
+        // The useSignUp hook resolves (rather than rejecting) for these, so the
+        // specific Clerk message isn't always available here; give an accurate,
+        // actionable hint instead.
         setError(
-          "We started creating your account but extra verification is required. " +
-            "Please check your email and complete the steps, then sign in."
+          "We couldn't create your account. Please use a stronger password " +
+            "(at least 8 characters with a mix of letters, numbers, and symbols) " +
+            "and try again."
         );
         return;
       } else {
