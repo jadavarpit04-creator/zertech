@@ -24,12 +24,7 @@ export default function HistoryPage() {
             {data.map((a: any) => (
               <li key={a.id} className="flex items-center justify-between px-4 py-3 text-sm">
                 <div>
-                  <div className="font-mono">{a.action}</div>
-                  {a.meta && Object.keys(a.meta as object).length > 0 && (
-                    <div className="mt-0.5 font-mono text-xs text-muted-foreground">
-                      {JSON.stringify(a.meta)}
-                    </div>
-                  )}
+                  <div className="font-mono">{formatAction(a.action, a.meta)}</div>
                 </div>
                 <div className="font-mono text-xs text-muted-foreground">
                   {new Date(a.created_at).toLocaleString()}
@@ -41,4 +36,23 @@ export default function HistoryPage() {
       </div>
     </>
   );
+}
+
+function formatAction(action: string, meta?: any): string {
+  const map: Record<string, (m: any) => string> = {
+    "draft.created": () => "Draft created",
+    "draft.sent": () => "Message sent",
+    "draft.auto_sent": () => "Message auto-sent",
+    "draft.edited": () => "Draft edited",
+    "draft.discarded": () => "Draft discarded",
+    "draft.approved": () => "Draft approved",
+    "invoices.imported": () => "Invoices imported",
+    "integration.connected": (m) => m?.provider ? `Connected ${m.provider}` : "Integration connected",
+    "integration.disconnected": (m) => m?.provider ? `Disconnected ${m.provider}` : "Integration disconnected",
+    "invoice.reminder_sent": () => "Invoice reminder sent",
+    "lead.followup_sent": () => "Lead follow-up sent",
+    "draft.created_invoice": () => "Invoice draft created",
+    "draft.created_lead": () => "Lead draft created",
+  };
+  return map[action]?.(meta) ?? action;
 }
