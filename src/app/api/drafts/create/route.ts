@@ -25,6 +25,8 @@ export async function POST(req: NextRequest) {
     }
 
     const sourceId = invoice_id || lead_id || null;
+    // source_id is UUID type — only set if valid UUID
+    const safeSourceId = sourceId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sourceId) ? sourceId : null;
     const kind = invoice_id ? "invoice" : lead_id ? "lead" : "invoice";
 
     const { data: draft, error } = await supabaseAdmin
@@ -32,7 +34,7 @@ export async function POST(req: NextRequest) {
       .insert({
         user_id,
         kind,
-        source_id: sourceId,
+        source_id: safeSourceId,
         subject,
         body,
         status: status || "pending",
