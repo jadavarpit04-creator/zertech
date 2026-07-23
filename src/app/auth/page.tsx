@@ -64,7 +64,9 @@ export default function AuthPage() {
     // (e.g. "Password has been found in an online data breach..."). The generic
     // `err.message` does not always surface those, so we extract them here.
     const clerkMessage = (err: unknown): string => {
-      const e = err as { errors?: Array<{ long_message?: string; message?: string }> };
+      const e = err as {
+        errors?: Array<{ long_message?: string; longMessage?: string; message?: string }>;
+      };
       if (e && Array.isArray(e.errors) && e.errors.length > 0) {
         const first = e.errors[0];
         // Clerk SDK errors use either snake_case (long_message) or camelCase
