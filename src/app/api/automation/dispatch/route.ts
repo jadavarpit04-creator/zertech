@@ -112,9 +112,12 @@ function extractEmail(from: string): string {
 
 function extractAmount(text: string): number | null {
   const patterns = [
-    /(?:amount|total|sum|due)\s*[:₹$€]?\s*(\d[\d,]*)/i,
+    // Match $500 or $500.00 or $1,500.00 anywhere first
     /[₹$€]\s*(\d[\d,]*(?:\.\d+)?)/,
-    /\b(\d{2,3}(?:,\d{3})*(?:\.\d{2})?)\b/,
+    // Match "amount: 500" or "total: 500.00"
+    /(?:amount|total|sum)\s*[:₹$€]?\s*(\d[\d,]*(?:\.\d+)?)/i,
+    // Match bare number >= 100 (likely an amount)
+    /\b(\d{3,}(?:,\d{3})*(?:\.\d{2})?)\b/,
   ];
   for (const pattern of patterns) {
     const match = text.match(pattern);
