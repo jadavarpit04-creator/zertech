@@ -7,7 +7,7 @@
  * Webhook URLs .env me define hain:
  *   AP_WEBHOOK_INVOICE_DRAFT=https://cloud.activepieces.com/api/v1/webhooks/xxx
  *   AP_WEBHOOK_LEAD_DRAFT=https://cloud.activepieces.com/api/v1/webhooks/yyy
- *   AP_WEBHOOK_SEND_APPROVAL=https://cloud.activepieces.com/api/v1/webhooks/zzz
+ *   AP_WEBHOOK_SEND_CONFIRM=https://cloud.activepieces.com/api/v1/webhooks/zzz
  *   AP_WEBHOOK_SECRET=shared_secret
  */
 
@@ -82,7 +82,7 @@ export async function triggerSendAfterApproval(data: {
   scheduled_for?: string | null;
 }) {
   return callWebhook(
-    process.env.AP_WEBHOOK_SEND_APPROVAL || "",
+    process.env.AP_WEBHOOK_SEND_CONFIRM || "",
     data
   );
 }
