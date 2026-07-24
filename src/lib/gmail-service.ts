@@ -183,12 +183,12 @@ export async function syncEmails(
   refreshToken: string | null,
   _userId: string
 ): Promise<EmailData[]> {
-  const thirtyDaysAgo =
-    Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
+  const sevenDaysAgo =
+    Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60;
 
-  // â”€â”€ List messages â”€â”€
+  // ── List messages ──
   const listRes = await fetch(
-    `${GMAIL_API_BASE}/messages?q=after:${thirtyDaysAgo}&maxResults=50`,
+    `${GMAIL_API_BASE}/messages?q=after:${sevenDaysAgo}&maxResults=50`,
     { headers: { Authorization: `Bearer ${accessToken}` } },
   );
 
