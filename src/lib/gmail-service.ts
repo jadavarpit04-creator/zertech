@@ -189,7 +189,7 @@ export async function syncEmails(
   // ── List messages ──
   const listRes = await fetch(
     `${GMAIL_API_BASE}/messages?q=after:${thirtyDaysAgo}&maxResults=5`,
-    { headers: { Authorization: `Bearer ${accessToken}` } },
+       { headers: { Authorization: `Bearer ${accessToken}` } },
   );
 
   // Auto-refresh if token expired
@@ -216,7 +216,7 @@ export async function syncEmails(
     const details = await Promise.all(
       batch.map((msg) =>
         fetch(`${GMAIL_API_BASE}/messages/${msg.id}`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
+          headers: { Authorization: `Bearer ${accessToken}` }
         }).then((r) => r.json())
       )
     );
