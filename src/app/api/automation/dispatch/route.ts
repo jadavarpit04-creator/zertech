@@ -56,29 +56,18 @@ export async function GET(req: NextRequest) {
           let leadDispatched = false;
 
           if (invoices.length > 0) {
-            const gmailIds = invoices.map(i => i.gmail_id);
-            const { data: existing } = await supabase
-              .from("drafts")
-              .select("source_message_id")
-              .eq("user_id", userId)
-              .in("source_message_id", gmailIds);
-            const processedIds = new Set((existing || []).map(d => d.source_message_id));
-            const newInvoices = invoices.filter(i => !processedIds.has(i.gmail_id));
-
-            if (newInvoices.length > 0) {
-              const items = newInvoices.map(inv => ({
-                user_id: userId,
-                gmail_access_token: tokenData.accessToken,
-                client_name: inv.from.split("<")[0]?.trim() || inv.from,
-                client_email: extractEmail(inv.from),
-                invoice_number: extractInvoiceNumber(inv.subject) ?? undefined,
-                amount: extractAmount(inv.subject + " " + inv.body_snippet) || 0,
-                due_date: extractDueDate(inv.subject + " " + inv.body_snippet) || new Date().toISOString().split("T")[0],
-                tone: "friendly",
-                gmail_id: inv.gmail_id,
-              }));
-              invoiceDispatched = await triggerInvoiceDraftCreation(items);
-            }
+            const items = invoices.map(inv => ({
+              user_id: userId,
+              gmail_access_token: tokenData.accessToken,
+              client_name: inv.from.split("<")[0]?.trim() || inv.from,
+              client_email: extractEmail(inv.from),
+              invoice_number: extractInvoiceNumber(inv.subject) ?? undefined,
+              amount: extractAmount(inv.subject + " " + inv.body_snippet) || 0,
+              due_date: extractDueDate(inv.subject + " " + inv.body_snippet) || new Date().toISOString().split("T")[0],
+              tone: "friendly",
+              gmail_id: inv.gmail_id,
+            }));
+            invoiceDispatched = await triggerInvoiceDraftCreation(items);
           }
 
           if (leads.length > 0) {

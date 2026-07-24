@@ -188,7 +188,7 @@ export async function syncEmails(
 
   // ── List messages ──
   const listRes = await fetch(
-    `${GMAIL_API_BASE}/messages?q=after:${thirtyDaysAgo}&maxResults=10`,
+    `${GMAIL_API_BASE}/messages?q=after:${thirtyDaysAgo}&maxResults=5`,
     { headers: { Authorization: `Bearer ${accessToken}` } },
   );
 
