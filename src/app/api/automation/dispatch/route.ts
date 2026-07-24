@@ -4,7 +4,6 @@ import { syncEmails, detectInvoices, detectLeads } from "@/lib/gmail-service";
 import { triggerInvoiceDraftCreation, triggerLeadDraftCreation } from "@/lib/activepieces-service";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300;
 
 export async function GET(req: NextRequest) {
   try {
@@ -29,64 +28,67 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ scanned: 0, message: "No connected users" });
     }
 
-    const results = await Promise.all(
-      integrations.map(async (integration) => {
-        const userId = integration.user_id;
-        const tokenData = integration.token_data as any;
-        if (!tokenData?.accessToken) {
-          return { userId, status: "skipped_no_token" };
-        }
+    // Process 1 user per invocation to stay within Vercel Hobby 10s limit.
+    // Use round-robin based on the 5-minute window so each tick handles
+    // a different user. Cron runs every 5 min — all users cycle through.
+    const index = Math.floor(Date.now() / 300_000) % integrations.length;
+    const integration = integrations[index];
+    const userId = integration.user_id;
+    const tokenData = integration.token_data as any;
 
-        try {
-          const emails = await syncEmails(
-            tokenData.accessToken,
-            tokenData.refreshToken || null,
-            userId
-          );
+    if (!tokenData?.accessToken) {
+      return NextResponse.json({ userId, status: "skipped_no_token" });
+    }
 
-          if (emails.length === 0) {
-            return { userId, status: "ok", synced: 0 };
-          }
+    try {
+      const emails = await syncEmails(
+        tokenData.accessToken,
+        tokenData.refreshToken || null,
+        userId
+      );
 
-          const invoices = detectInvoices(emails);
-          const leads = detectLeads(emails);
-          let invoiceDispatched = false;
-          let leadDispatched = false;
+      if (emails.length === 0) {
+        return NextResponse.json({ userId, status: "ok", synced: 0 });
+      }
 
-          if (invoices.length > 0) {
-            const items = invoices.map(inv => ({
-              user_id: userId, gmail_access_token: tokenData.accessToken,
-              client_name: inv.from.split("<")[0]?.trim() || inv.from.split("@")[0] || "Client",
-              client_email: extractEmail(inv.from),
-              invoice_number: extractInvoiceNumber(inv.subject) ?? undefined,
-              amount: extractAmount(inv.subject + " " + inv.body_snippet) || 0,
-              due_date: extractDueDate(inv.subject + " " + inv.body_snippet) || new Date().toISOString().split("T")[0],
-              tone: "friendly", gmail_id: inv.gmail_id,
-            }));
-            invoiceDispatched = await triggerInvoiceDraftCreation(items);
-          }
+      const invoices = detectInvoices(emails);
+      const leads = detectLeads(emails);
+      let invoiceDispatched = false;
+      let leadDispatched = false;
 
-          if (leads.length > 0) {
-            const items = leads.map(lead => ({
-              user_id: userId, gmail_access_token: tokenData.accessToken,
-              lead_name: lead.from.split("<")[0]?.trim() || lead.from,
-              email: extractEmail(lead.from), inquiry_text: lead.body_snippet,
-              tone: "professional", score: lead.score,
-            }));
-            leadDispatched = await triggerLeadDraftCreation(items);
-          }
+      if (invoices.length > 0) {
+        const items = invoices.map(inv => ({
+          user_id: userId, gmail_access_token: tokenData.accessToken,
+          client_name: inv.from.split("<")[0]?.trim() || inv.from.split("@")[0] || "Client",
+          client_email: extractEmail(inv.from),
+          invoice_number: extractInvoiceNumber(inv.subject) ?? undefined,
+          amount: extractAmount(inv.subject + " " + inv.body_snippet) || 0,
+          due_date: extractDueDate(inv.subject + " " + inv.body_snippet) || new Date().toISOString().split("T")[0],
+          tone: "friendly", gmail_id: inv.gmail_id,
+        }));
+        invoiceDispatched = await triggerInvoiceDraftCreation(items);
+      }
 
-          return { userId, status: "ok", synced: emails.length,
-            invoicesFound: invoices.length, invoiceDispatched,
-            leadsFound: leads.length, leadDispatched };
-        } catch (e: any) {
-          console.error(`[dispatch] Error user ${userId}:`, e.message);
-          return { userId, status: "error", error: e.message };
-        }
-      })
-    );
+      if (leads.length > 0) {
+        const items = leads.map(lead => ({
+          user_id: userId, gmail_access_token: tokenData.accessToken,
+          lead_name: lead.from.split("<")[0]?.trim() || lead.from,
+          email: extractEmail(lead.from), inquiry_text: lead.body_snippet,
+          tone: "professional", score: lead.score,
+        }));
+        leadDispatched = await triggerLeadDraftCreation(items);
+      }
 
-    return NextResponse.json({ scanned: integrations.length, results });
+      return NextResponse.json({
+        userId, status: "ok", synced: emails.length,
+        totalUsers: integrations.length, currentIndex: index,
+        invoicesFound: invoices.length, invoiceDispatched,
+        leadsFound: leads.length, leadDispatched,
+      });
+    } catch (e: any) {
+      console.error(`[dispatch] Error user ${userId}:`, e.message);
+      return NextResponse.json({ userId, status: "error", error: e.message });
+    }
   } catch (err: any) {
     console.error("[dispatch] Fatal:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
