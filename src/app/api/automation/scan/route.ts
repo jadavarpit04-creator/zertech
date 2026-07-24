@@ -5,7 +5,6 @@ import { getGmailTokens } from "@/lib/integration-tokens";
 import { generateInvoiceDraft, generateLeadDraft, getEscalationTone } from "@/lib/ai-service";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300; // 5 min timeout
 
 /**
  * GET /api/automation/scan
@@ -28,9 +27,7 @@ export async function GET(req: NextRequest) {
     }
 
     const supabase = supabaseAdmin;
-    const results: any[] = [];
 
-    // 2. Fetch all connected Gmail integrations
     const { data: integrations, error: intErr } = await supabase
       .from("integrations")
       .select("user_id, token_data")
@@ -42,179 +39,159 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ scanned: 0, message: "No connected users found" });
     }
 
-    // 3. Process each user
-    for (const integration of integrations) {
-      const userId = integration.user_id;
-      const tokenData = integration.token_data as any;
+    // Process 1 user per invocation to fit Vercel Hobby 10s limit.
+    const index = Math.floor(Date.now() / 300_000) % integrations.length;
+    const integration = integrations[index];
+    const userId = integration.user_id;
+    const tokenData = integration.token_data as any;
 
-      if (!tokenData?.accessToken) {
-        results.push({ userId, status: "skipped_no_token" });
-        continue;
-      }
-
-      try {
-        // 3a. Sync emails (last 1 hour)
-        const emails = await syncEmails(
-          tokenData.accessToken,
-          tokenData.refreshToken || null,
-          userId
-        );
-
-        if (emails.length === 0) {
-          results.push({ userId, status: "ok", synced: 0, invoices: 0, leads: 0 });
-          continue;
-        }
-
-        // 3b. Detect invoices and leads
-        const invoices = detectInvoices(emails);
-        const leads = detectLeads(emails);
-
-        let invoicesCreated = 0;
-        let leadsCreated = 0;
-        let draftsCreated = 0;
-
-        // 3c. Process detected invoices
-        for (const inv of invoices) {
-          try {
-            // Extract data from email
-            const clientName = inv.from.split("<")[0]?.trim() || inv.from;
-            const clientEmail = extractEmail(inv.from);
-            const amount = extractAmount(inv.subject + " " + inv.body_snippet);
-            const dueDate = extractDueDate(inv.body_snippet);
-
-            // Generate AI draft
-            const draft = await generateInvoiceDraft("friendly", {
-              client_name: clientName,
-              amount: amount || 0,
-              due_date: dueDate || new Date().toISOString().split("T")[0],
-              days_overdue: 0,
-              invoice_id: extractInvoiceNumber(inv.subject) ?? undefined,
-            });
-
-            // Insert invoice record
-            const { data: invoiceRec, error: invErr } = await supabase
-              .from("invoices")
-              .insert({
-                user_id: userId,
-                client_name: clientName,
-                client_email: clientEmail,
-                invoice_number: extractInvoiceNumber(inv.subject),
-                amount: amount || 0,
-                due_date: dueDate || null,
-                status: "pending",
-                original_email_subject: inv.subject,
-                meta: { source: "automation_scan", gmail_id: inv.gmail_id, tone: "friendly" },
-              })
-              .select()
-              .single();
-
-            if (invErr) throw invErr;
-            invoicesCreated++;
-
-            // Insert draft
-            const { error: draftErr } = await supabase.from("drafts").insert({
-              user_id: userId,
-              kind: "invoice",
-              source_id: invoiceRec.id,
-              recipient_name: clientName,
-              recipient_email: clientEmail,
-              subject: draft.subject,
-              body: draft.body,
-              status: "pending",
-            });
-
-            if (draftErr) throw draftErr;
-            draftsCreated++;
-
-            // Log activity
-            await supabase.from("activity_log").insert({
-              user_id: userId,
-              action: "automation.invoice_detected",
-              entity_type: "invoice",
-              entity_id: invoiceRec.id,
-              meta: { gmail_id: inv.gmail_id, subject: inv.subject },
-            });
-          } catch (e: any) {
-            console.error(`[scan] Invoice processing error for user ${userId}:`, e.message);
-          }
-        }
-
-        // 3d. Process detected leads
-        for (const lead of leads) {
-          try {
-            const leadName = lead.from.split("<")[0]?.trim() || lead.from;
-            const leadEmail = extractEmail(lead.from);
-
-            // Generate AI draft
-            const draft = await generateLeadDraft("professional", {
-              lead_name: leadName,
-              source: "Email",
-              notes: lead.body_snippet.slice(0, 200),
-            });
-
-            // Insert lead record
-            const { data: leadRec, error: leadErr } = await supabase
-              .from("leads")
-              .insert({
-                user_id: userId,
-                name: leadName,
-                email: leadEmail,
-                source: "Email Automation",
-                score: lead.score,
-                status: "new",
-                notes: lead.body_snippet.slice(0, 500),
-              })
-              .select()
-              .single();
-
-            if (leadErr) throw leadErr;
-            leadsCreated++;
-
-            // Insert draft
-            const { error: draftErr } = await supabase.from("drafts").insert({
-              user_id: userId,
-              kind: "lead",
-              source_id: leadRec.id,
-              recipient_name: leadName,
-              recipient_email: leadEmail,
-              subject: draft.subject,
-              body: draft.body,
-              status: "pending",
-            });
-
-            if (draftErr) throw draftErr;
-            draftsCreated++;
-
-            // Log activity
-            await supabase.from("activity_log").insert({
-              user_id: userId,
-              action: "automation.lead_detected",
-              entity_type: "lead",
-              entity_id: leadRec.id,
-              meta: { gmail_id: lead.gmail_id, score: lead.score, subject: lead.subject },
-            });
-          } catch (e: any) {
-            console.error(`[scan] Lead processing error for user ${userId}:`, e.message);
-          }
-        }
-
-        results.push({
-          userId,
-          status: "ok",
-          synced: emails.length,
-          invoicesFound: invoices.length,
-          invoicesCreated,
-          leadsFound: leads.length,
-          leadsCreated,
-          draftsCreated,
-        });
-      } catch (e: any) {
-        console.error(`[scan] Error processing user ${userId}:`, e.message);
-        results.push({ userId, status: "error", error: e.message });
-      }
+    if (!tokenData?.accessToken) {
+      return NextResponse.json({ userId, totalUsers: integrations.length, currentIndex: index, status: "skipped_no_token" });
     }
 
-    return NextResponse.json({ scanned: integrations.length, results });
+    try {
+      const emails = await syncEmails(
+        tokenData.accessToken,
+        tokenData.refreshToken || null,
+        userId
+      );
+
+      if (emails.length === 0) {
+        return NextResponse.json({ userId, totalUsers: integrations.length, currentIndex: index, status: "ok", synced: 0, invoices: 0, leads: 0 });
+      }
+
+      const invoices = detectInvoices(emails);
+      const leads = detectLeads(emails);
+
+      let invoicesCreated = 0;
+      let leadsCreated = 0;
+      let draftsCreated = 0;
+
+      for (const inv of invoices) {
+        try {
+          const clientName = inv.from.split("<")[0]?.trim() || inv.from;
+          const clientEmail = extractEmail(inv.from);
+          const amount = extractAmount(inv.subject + " " + inv.body_snippet);
+          const dueDate = extractDueDate(inv.body_snippet);
+
+          const draft = await generateInvoiceDraft("friendly", {
+            client_name: clientName,
+            amount: amount || 0,
+            due_date: dueDate || new Date().toISOString().split("T")[0],
+            days_overdue: 0,
+            invoice_id: extractInvoiceNumber(inv.subject) ?? undefined,
+          });
+
+          const { data: invoiceRec, error: invErr } = await supabase
+            .from("invoices")
+            .insert({
+              user_id: userId,
+              client_name: clientName,
+              client_email: clientEmail,
+              invoice_number: extractInvoiceNumber(inv.subject),
+              amount: amount || 0,
+              due_date: dueDate || null,
+              status: "pending",
+              original_email_subject: inv.subject,
+              meta: { source: "automation_scan", gmail_id: inv.gmail_id, tone: "friendly" },
+            })
+            .select()
+            .single();
+
+          if (invErr) throw invErr;
+          invoicesCreated++;
+
+          const { error: draftErr } = await supabase.from("drafts").insert({
+            user_id: userId,
+            kind: "invoice",
+            source_id: invoiceRec.id,
+            recipient_name: clientName,
+            recipient_email: clientEmail,
+            subject: draft.subject,
+            body: draft.body,
+            status: "pending",
+          });
+
+          if (draftErr) throw draftErr;
+          draftsCreated++;
+
+          await supabase.from("activity_log").insert({
+            user_id: userId,
+            action: "automation.invoice_detected",
+            entity_type: "invoice",
+            entity_id: invoiceRec.id,
+            meta: { gmail_id: inv.gmail_id, subject: inv.subject },
+          });
+        } catch (e: any) {
+          console.error(`[scan] Invoice processing error for user ${userId}:`, e.message);
+        }
+      }
+
+      for (const lead of leads) {
+        try {
+          const leadName = lead.from.split("<")[0]?.trim() || lead.from;
+          const leadEmail = extractEmail(lead.from);
+
+          const draft = await generateLeadDraft("professional", {
+            lead_name: leadName,
+            source: "Email",
+            notes: lead.body_snippet.slice(0, 200),
+          });
+
+          const { data: leadRec, error: leadErr } = await supabase
+            .from("leads")
+            .insert({
+              user_id: userId,
+              name: leadName,
+              email: leadEmail,
+              source: "Email Automation",
+              score: lead.score,
+              status: "new",
+              notes: lead.body_snippet.slice(0, 500),
+            })
+            .select()
+            .single();
+
+          if (leadErr) throw leadErr;
+          leadsCreated++;
+
+          const { error: draftErr } = await supabase.from("drafts").insert({
+            user_id: userId,
+            kind: "lead",
+            source_id: leadRec.id,
+            recipient_name: leadName,
+            recipient_email: leadEmail,
+            subject: draft.subject,
+            body: draft.body,
+            status: "pending",
+          });
+
+          if (draftErr) throw draftErr;
+          draftsCreated++;
+
+          await supabase.from("activity_log").insert({
+            user_id: userId,
+            action: "automation.lead_detected",
+            entity_type: "lead",
+            entity_id: leadRec.id,
+            meta: { gmail_id: lead.gmail_id, score: lead.score, subject: lead.subject },
+          });
+        } catch (e: any) {
+          console.error(`[scan] Lead processing error for user ${userId}:`, e.message);
+        }
+      }
+
+      return NextResponse.json({
+        userId, status: "ok",
+        totalUsers: integrations.length, currentIndex: index,
+        synced: emails.length,
+        invoicesFound: invoices.length, invoicesCreated,
+        leadsFound: leads.length, leadsCreated, draftsCreated,
+      });
+    } catch (e: any) {
+      console.error(`[scan] Error processing user ${userId}:`, e.message);
+      return NextResponse.json({ userId, totalUsers: integrations.length, currentIndex: index, status: "error", error: e.message });
+    }
   } catch (err: any) {
     console.error("[scan] Fatal error:", err);
     return NextResponse.json({ error: err.message ?? "Internal error" }, { status: 500 });
