@@ -17,7 +17,6 @@ export async function GET(req: NextRequest) {
     }
 
     const supabase = supabaseAdmin;
-    const results: any[] = [];
 
     const { data: integrations, error: intErr } = await supabase
       .from("integrations")
@@ -30,71 +29,62 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ scanned: 0, message: "No connected users" });
     }
 
-    // Sequential processing — avoids Gmail rate limits + predictable timing
-    for (const integration of integrations) {
-      const userId = integration.user_id;
-      const tokenData = integration.token_data as any;
-      if (!tokenData?.accessToken) {
-        results.push({ userId, status: "skipped_no_token" });
-        continue;
-      }
-
-      try {
-        const emails = await syncEmails(
-          tokenData.accessToken,
-          tokenData.refreshToken || null,
-          userId
-        );
-
-        if (emails.length === 0) {
-          results.push({ userId, status: "ok", synced: 0 });
-          continue;
+    const results = await Promise.all(
+      integrations.map(async (integration) => {
+        const userId = integration.user_id;
+        const tokenData = integration.token_data as any;
+        if (!tokenData?.accessToken) {
+          return { userId, status: "skipped_no_token" };
         }
 
-        const invoices = detectInvoices(emails);
-        const leads = detectLeads(emails);
+        try {
+          const emails = await syncEmails(
+            tokenData.accessToken,
+            tokenData.refreshToken || null,
+            userId
+          );
 
-        let invoiceDispatched = false;
-        let leadDispatched = false;
+          if (emails.length === 0) {
+            return { userId, status: "ok", synced: 0 };
+          }
 
-        if (invoices.length > 0) {
-          const items = invoices.map(inv => ({
-            user_id: userId,
-            gmail_access_token: tokenData.accessToken,
-            client_name: inv.from.split("<")[0]?.trim() || inv.from.split("@")[0] || "Client",
-            client_email: extractEmail(inv.from),
-            invoice_number: extractInvoiceNumber(inv.subject) ?? undefined,
-            amount: extractAmount(inv.subject + " " + inv.body_snippet) || 0,
-            due_date: extractDueDate(inv.subject + " " + inv.body_snippet) || new Date().toISOString().split("T")[0],
-            tone: "friendly",
-            gmail_id: inv.gmail_id,
-          }));
-          invoiceDispatched = await triggerInvoiceDraftCreation(items);
+          const invoices = detectInvoices(emails);
+          const leads = detectLeads(emails);
+          let invoiceDispatched = false;
+          let leadDispatched = false;
+
+          if (invoices.length > 0) {
+            const items = invoices.map(inv => ({
+              user_id: userId, gmail_access_token: tokenData.accessToken,
+              client_name: inv.from.split("<")[0]?.trim() || inv.from.split("@")[0] || "Client",
+              client_email: extractEmail(inv.from),
+              invoice_number: extractInvoiceNumber(inv.subject) ?? undefined,
+              amount: extractAmount(inv.subject + " " + inv.body_snippet) || 0,
+              due_date: extractDueDate(inv.subject + " " + inv.body_snippet) || new Date().toISOString().split("T")[0],
+              tone: "friendly", gmail_id: inv.gmail_id,
+            }));
+            invoiceDispatched = await triggerInvoiceDraftCreation(items);
+          }
+
+          if (leads.length > 0) {
+            const items = leads.map(lead => ({
+              user_id: userId, gmail_access_token: tokenData.accessToken,
+              lead_name: lead.from.split("<")[0]?.trim() || lead.from,
+              email: extractEmail(lead.from), inquiry_text: lead.body_snippet,
+              tone: "professional", score: lead.score,
+            }));
+            leadDispatched = await triggerLeadDraftCreation(items);
+          }
+
+          return { userId, status: "ok", synced: emails.length,
+            invoicesFound: invoices.length, invoiceDispatched,
+            leadsFound: leads.length, leadDispatched };
+        } catch (e: any) {
+          console.error(`[dispatch] Error user ${userId}:`, e.message);
+          return { userId, status: "error", error: e.message };
         }
-
-        if (leads.length > 0) {
-          const items = leads.map(lead => ({
-            user_id: userId,
-            gmail_access_token: tokenData.accessToken,
-            lead_name: lead.from.split("<")[0]?.trim() || lead.from,
-            email: extractEmail(lead.from),
-            inquiry_text: lead.body_snippet,
-            tone: "professional",
-            score: lead.score,
-          }));
-          leadDispatched = await triggerLeadDraftCreation(items);
-        }
-
-        results.push({
-          userId, status: "ok", synced: emails.length,
-          invoicesFound: invoices.length, invoiceDispatched,
-          leadsFound: leads.length, leadDispatched,
-        });
-      } catch (e: any) {
-        console.error(`[dispatch] Error user ${userId}:`, e.message);
-        results.push({ userId, status: "error", error: e.message });
-      }
-    }
+      })
+    );
 
     return NextResponse.json({ scanned: integrations.length, results });
   } catch (err: any) {
@@ -103,8 +93,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ─── Helpers ────────────────────────────────────────────────
-
 function extractEmail(from: string): string {
   const match = from.match(/<([^>]+)>/);
   return match ? match[1] : from.trim();
@@ -112,20 +100,14 @@ function extractEmail(from: string): string {
 
 function extractAmount(text: string): number | null {
   const patterns = [
-    // Match $500 or $500.00 or $1,500.00 anywhere first
     /[₹$€]\s*(\d[\d,]*(?:\.\d+)?)/,
-    // Match "amount: 500" or "total: 500.00"
     /(?:amount|total|sum)\s*[:₹$€]?\s*(\d[\d,]*(?:\.\d+)?)/i,
-    // Match bare number >= 100 (likely an amount)
     /\b(\d{3,}(?:,\d{3})*(?:\.\d{2})?)\b/,
   ];
   for (const pattern of patterns) {
     const match = text.match(pattern);
-    if (match) {
-      const val = match[1].replace(/,/g, "");
-      const num = parseFloat(val);
-      if (!isNaN(num) && num > 0) return num;
-    }
+    if (match) { const val = match[1].replace(/,/g, ""); const num = parseFloat(val);
+      if (!isNaN(num) && num > 0) return num; }
   }
   return null;
 }
