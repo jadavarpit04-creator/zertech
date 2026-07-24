@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { invoice_id, subject, body, status, user_id, lead_id } = await req.json();
+    const { invoice_id, subject, body, status, user_id, lead_id, recipient_name, recipient_email } = await req.json();
     if (!user_id || !subject || !body) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
@@ -38,8 +38,8 @@ export async function POST(req: NextRequest) {
         subject,
         body,
         status: status || "pending",
-        recipient_name: "",
-        recipient_email: "",
+        recipient_name: recipient_name || "",
+        recipient_email: recipient_email || "",
       })
       .select()
       .single();
