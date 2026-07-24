@@ -239,7 +239,7 @@ function Workflows() {
 function HowItWorks() {
   const steps = [
     { n: "01", t: "Connect", d: "Sign in and link your inbox." },
-    { n: "02", t: "Import", d: "Bring in invoices and leads." },
+    { n: "02", t: "Import", d: "Scans last 30 days once. After that, only new emails. No duplicates." },
     { n: "03", t: "Review", d: "AI drafts messages. You approve or edit." },
     { n: "04", t: "Send & log", d: "Message goes out. Action logged automatically." },
   ];
