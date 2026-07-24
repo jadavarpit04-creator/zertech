@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
           const items = invoices.map(inv => ({
             user_id: userId,
             gmail_access_token: tokenData.accessToken,
-            client_name: inv.from.split("<")[0]?.trim() || inv.from,
+            client_name: inv.from.split("<")[0]?.trim() || inv.from.split("@")[0] || "Client",
             client_email: extractEmail(inv.from),
             invoice_number: extractInvoiceNumber(inv.subject) ?? undefined,
             amount: extractAmount(inv.subject + " " + inv.body_snippet) || 0,

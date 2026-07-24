@@ -219,7 +219,7 @@ export async function syncEmails(
     Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
 
   const listRes = await fetch(
-    `${GMAIL_API_BASE}/messages?q=after:${thirtyDaysAgo}&maxResults=5`,
+    `${GMAIL_API_BASE}/messages?q=after:${thirtyDaysAgo}&maxResults=20`,
     { headers: { Authorization: `Bearer ${accessToken}` } },
   );
 
