@@ -45,16 +45,11 @@ export async function triggerInvoiceDraftCreation(items: Array<{
   tone?: string;
   gmail_id?: string;
 }>) {
-  // Send each item individually so ActivePieces gets flat data
-  let allOk = true;
-  for (const item of items) {
-    const ok = await callWebhook(
-      process.env.AP_WEBHOOK_INVOICE_DRAFT || "",
-      item
-    );
-    if (!ok) allOk = false;
-  }
-  return allOk;
+  // Send all items in a batch (needed for ActivePieces Loop on Items)
+  return callWebhook(
+    process.env.AP_WEBHOOK_INVOICE_DRAFT || "",
+    { items }
+  );
 }
 
 // ─── Flow 2: Lead Draft Creation ─────────────────────────────
