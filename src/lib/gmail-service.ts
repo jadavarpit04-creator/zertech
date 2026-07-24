@@ -219,7 +219,7 @@ export async function syncEmails(
     Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60;
 
   const listRes = await fetch(
-    `${GMAIL_API_BASE}/messages?q=after:${sevenDaysAgo}&maxResults=5`,
+    `${GMAIL_API_BASE}/messages?q=after:${sevenDaysAgo}&maxResults=2`,
     { headers: { Authorization: `Bearer ${accessToken}` } },
   );
 
@@ -238,7 +238,7 @@ export async function syncEmails(
     listData.messages ?? [];
 
   const emails: EmailData[] = [];
-  const batchSize = 5;
+  const batchSize = 2;
 
   for (let i = 0; i < messages.length; i += batchSize) {
     const batch = messages.slice(i, i + batchSize);
