@@ -17,6 +17,8 @@ const BASE = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:8080";
 async function callWebhook(url: string, payload: unknown): Promise<boolean> {
   if (!url) return false;
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -24,7 +26,9 @@ async function callWebhook(url: string, payload: unknown): Promise<boolean> {
         "X-Webhook-Secret": AP_SECRET,
       },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
     return res.ok;
   } catch (e) {
     console.error("[activepieces] webhook call failed:", e);
