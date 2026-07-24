@@ -344,10 +344,12 @@ export function detectInvoices(emails: EmailData[]): DetectedInvoice[] {
 
   for (const email of emails) {
     const subjectLower = email.subject.toLowerCase();
+    const bodyLower = (email.body_snippet || "").toLowerCase();
+    const combined = subjectLower + " " + bodyLower;
 
-    const match = invoiceKeywords.find((kw) => subjectLower.includes(kw));
+    const match = invoiceKeywords.find((kw) => combined.includes(kw));
     if (match) {
-      results.push({ ...email, matchReason: `Subject contains "${match}"` });
+      results.push({ ...email, matchReason: `Subject/body contains "${match}"` });
       continue;
     }
 
