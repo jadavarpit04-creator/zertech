@@ -19,7 +19,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { invoice_id, subject, body, status, user_id, lead_id, recipient_name, recipient_email } = await req.json();
+    const rawBody = await req.json();
+    let { invoice_id, subject, body, status, user_id, lead_id, recipient_name, recipient_email, gmail_id } = rawBody;
+
+    // Support nested "data" wrapper (ActivePieces sends it this way)
+    if (invoice_id === undefined && body === undefined && subject === undefined) {
+      const nested = rawBody?.data;
+      if (nested) {
+        invoice_id = nested.invoice_id;
+        subject = nested.subject;
+        body = nested.body;
+        status = nested.status;
+        user_id = nested.user_id;
+        lead_id = nested.lead_id;
+        recipient_name = nested.recipient_name;
+        recipient_email = nested.recipient_email;
+        gmail_id = nested.gmail_id;
+      }
+    }
     if (!user_id || !subject || !body) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
@@ -40,6 +57,7 @@ export async function POST(req: NextRequest) {
         status: status || "pending",
         recipient_name: recipient_name || "",
         recipient_email: recipient_email || "",
+        source_message_id: gmail_id || null,
       })
       .select()
       .single();
